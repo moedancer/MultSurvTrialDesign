@@ -506,4 +506,4 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
 stopCluster(my_cluster)
 
-save(power_metrics, file = "results/closed_testing_power_metrics.Rda")
+save(power_metrics, file = "results/data/closed_testing_power_metrics.Rda")
