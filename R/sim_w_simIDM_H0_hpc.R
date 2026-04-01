@@ -1,4 +1,4 @@
-hpc_version <- FALSE
+hpc_version <- FALSE # Is this the version running on PALMA II
 
 if (hpc_version) {
   .libPaths("/home/d/danzerm/R/library")
@@ -12,6 +12,7 @@ cores_to_use <- 20
 my_cluster <- makeCluster(cores_to_use)
 registerDoParallel(my_cluster)
 if (hpc_version) {
+  # Provide path to R packages if running on PALMA II
   clusterEvalQ(my_cluster, .libPaths("/home/d/danzerm/R/library"))
 }
 
@@ -108,29 +109,29 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
     ) <- metrics_names
 
     if (sec == 1) {
-      transitionTrt <- exponential_transition(h01 = 0.06, h02 = 0.3, h12 = 0.3)
-      transitionPl <- exponential_transition(h01 = 0.06, h02 = 0.3, h12 = 0.3)
+      transitionTrt <- exponential_transition(h01 = 0.1, h02 = 0.4, h12 = 0.3)
+      transitionPl <- exponential_transition(h01 = 0.1, h02 = 0.4, h12 = 0.3)
       nEventPFS <- rr * rr_to_n * 2 * r_PFS
       nEventOS <- rr * rr_to_n * 2 * r_OS
     }
 
     if (sec == 2) {
-      transitionTrt <- exponential_transition(h01 = 0.3, h02 = 0.28, h12 = 0.5)
-      transitionPl <- exponential_transition(h01 = 0.3, h02 = 0.28, h12 = 0.5)
+      transitionTrt <- exponential_transition(h01 = 0.5, h02 = 0.3, h12 = 0.6)
+      transitionPl <- exponential_transition(h01 = 0.5, h02 = 0.3, h12 = 0.6)
       nEventPFS <- rr * rr_to_n * 2 * r_PFS
       nEventOS <- rr * rr_to_n * 2 * r_OS
     }
 
     if (sec == 3) {
       transitionTrt <- exponential_transition(
-        h01 = 0.14,
-        h02 = 0.112,
-        h12 = 0.25
+        h01 = 0.18,
+        h02 = 0.15,
+        h12 = 0.255
       )
       transitionPl <- exponential_transition(
-        h01 = 0.14,
-        h02 = 0.112,
-        h12 = 0.25
+        h01 = 0.18,
+        h02 = 0.15,
+        h12 = 0.255
       )
       nEventPFS <- rr * rr_to_n * 2 * r_PFS
       nEventOS <- rr * rr_to_n * 2 * r_OS
@@ -138,11 +139,11 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
     if (sec == 4) {
       transitionTrt <- exponential_transition(
-        h01 = 0.18,
-        h02 = 0.06,
-        h12 = 0.17
+        h01 = 0.23,
+        h02 = 0.07,
+        h12 = 0.19
       )
-      transitionPl <- exponential_transition(h01 = 0.18, h02 = 0.06, h12 = 0.17)
+      transitionPl <- exponential_transition(h01 = 0.23, h02 = 0.07, h12 = 0.19)
       nEventPFS <- as.integer(rr * rr_to_n * 2 * r_PFS)
       nEventOS <- as.integer(rr * rr_to_n * 2 * r_OS)
     }
