@@ -1,7 +1,8 @@
 require(simIDM)
 
 # Compute correlation coefficient for PFS and OS in time-homogeneous Markovian illness-death models
-# We work on the basis of the simIDM package
+# Formula according to Fleischer et al. (2009)
+# We work on the basis of the simIDM packages
 thm_correlation <- function(simIDM_thm_model) {
   stopifnot(all(
     class(simIDM_thm_model) ==
