@@ -23,8 +23,21 @@ rr_vec <- c(2, 4, 10, 15, 25)
 rr_to_n <- 32
 
 # Determine event rates of PFS and OS after which the analyses shall be conducted
-r_PFS <- 25 / 64
-r_OS <- 38 / 64
+if (hpc_version) {
+  passed_args <- commandArgs(trailingOnly = TRUE)
+  if (length(passed_args) == 2) {
+    r_PFS <- as.numeric(passed_args[1]) / 64
+    r_OS <- as.numeric(passed_args[2]) / 64
+  } else {
+    # Default values if no arguments provided
+    r_PFS <- 25 / 64
+    r_OS <- 38 / 64
+  }
+} else {
+  # Values for local testing
+  r_PFS <- 25 / 64
+  r_OS <- 38 / 64
+}
 
 combinations <- expand.grid(secs, rr_vec)
 
@@ -814,17 +827,25 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
     )
 
     # Prepare additional information
-    power_metrics_info <- matrix(NA, ncol = 3, nrow = num_strategies)
-    colnames(power_metrics_info) <- c("scenario", "recruitment_rate", "frailty")
+    power_metrics_info <- matrix(NA, ncol = 5, nrow = num_strategies)
+    colnames(power_metrics_info) <- c(
+      "scenario",
+      "recruitment_rate",
+      "rPFS",
+      "rOS",
+      "frailty"
+    )
     power_metrics_info[, 1] <- sec
     power_metrics_info[, 2] <- rr
+    power_metrics_info[, 3] <- r_PFS
+    power_metrics_info[, 4] <- r_OS
 
     # Compute power/error rate characteristics
-    power_metrics_info[, 3] <- "NO"
+    power_metrics_info[, 5] <- "NO"
     power_metrics <- apply(results, MARGIN = c(2, 3), FUN = mean)
     power_metrics <- cbind(power_metrics_info, power_metrics)
 
-    power_metrics_info[, 3] <- "YES"
+    power_metrics_info[, 5] <- "YES"
     power_metrics_frailty <- apply(
       results_frailty,
       MARGIN = c(2, 3),
@@ -837,4 +858,24 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
 stopCluster(my_cluster)
 
-save(power_metrics, file = "results/data/closed_testing_fwer.Rda")
+if (hpc_version) {
+  if (length(passed_args) == 2) {
+    # Save results with custom filenames if custom event rates are provided
+    save(
+      power_metrics,
+      file = paste0(
+        "results/data/closed_testing_fwer_",
+        r_PFS * 64,
+        "_",
+        r_OS * 64,
+        ".Rda"
+      )
+    )
+  } else {
+    # Save results with default filename if no custom event rates are provided
+    save(power_metrics, file = "results/data/closed_testing_fwer.Rda")
+  }
+} else {
+  # Save results with default filename for non-HPC version
+  save(power_metrics, file = "results/data/closed_testing_fwer.Rda")
+}
