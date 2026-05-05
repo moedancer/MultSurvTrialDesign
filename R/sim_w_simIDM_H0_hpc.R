@@ -41,6 +41,8 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       .libPaths("/home/d/danzerm/R/library")
     }
 
+    set.seed(552026 + c)
+
     source("stat_and_var_calc.R")
     source("custom_censoring.R")
 

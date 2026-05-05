@@ -1,4 +1,4 @@
-hpc_version <- FALSE
+hpc_version <- FALSE # Is this the version running on PALMA II
 
 if (hpc_version) {
   .libPaths("/home/d/danzerm/R/library")
@@ -26,6 +26,8 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
     if (hpc_version) {
       .libPaths("/home/d/danzerm/R/library")
     }
+
+    set.seed(552026 + c)
 
     source("stat_and_var_calc.R")
 
