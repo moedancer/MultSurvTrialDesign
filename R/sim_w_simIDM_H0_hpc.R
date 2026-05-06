@@ -844,7 +844,7 @@ if (hpc_version) {
     save(
       power_metrics,
       file = paste0(
-        "results/data/closed_testing_fwer_",
+        "closed_testing_fwer_",
         r_PFS * 64,
         "_",
         r_OS * 64,
@@ -853,7 +853,7 @@ if (hpc_version) {
     )
   } else {
     # Save results with default filename if no custom event rates are provided
-    save(power_metrics, file = "results/data/closed_testing_fwer.Rda")
+    save(power_metrics, file = "closed_testing_fwer.Rda")
   }
 } else {
   # Save results with default filename for non-HPC version
