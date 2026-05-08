@@ -1,7 +1,21 @@
 require(ggplot2)
 require(ggpubr)
 
-load("results/data/closed_testing_fwer.Rda")
+override_r_PFS <- 33 / 64
+override_r_OS <- 46 / 64
+
+file_name_string <- "closed_testing_fwer"
+if (!is.na(override_r_PFS) & !is.na(override_r_OS)) {
+  file_name_string <- paste0(
+    file_name_string,
+    "_",
+    override_r_PFS * 64,
+    "_",
+    override_r_OS * 64
+  )
+}
+
+load(paste0("results/data/", file_name_string, ".Rda"))
 power_metrics <- unlist(power_metrics, recursive = FALSE)
 
 power_metrics <- lapply(power_metrics, function(mat) {
@@ -40,16 +54,32 @@ power_metrics <- lapply(power_metrics, FUN = function(x) {
   return(x)
 })
 
+save_file_string <- "fwer_restr"
+if (!is.na(override_r_PFS) & !is.na(override_r_OS)) {
+  save_file_string <- paste0(
+    save_file_string,
+    "_PFS",
+    override_r_PFS * 64,
+    "_OS",
+    override_r_OS * 64
+  )
+}
+
 ### CHOOSE SUBSET OF ALL COMBINATIONS FOR PLOT IN MAIN MANUSCRIPT
 plot_list <- list()
 for (i in 1:4) {
-  fixed_scenario <- i
+  save_file_string_scenario <- paste0(
+    save_file_string,
+    "_scenario",
+    i
+  )
+
   strategy_subset <- c("BON", "EX/LAST", "OS")
 
   power_metrics_matrix <- do.call(rbind, power_metrics)
   plot_matrix <- power_metrics_matrix[
     which(
-      power_metrics_matrix$scenario == fixed_scenario &
+      power_metrics_matrix$scenario == i &
         power_metrics_matrix$Strategy %in% strategy_subset
     ),
   ]
@@ -82,7 +112,7 @@ for (i in 1:4) {
     ylab("FWER") +
     theme(text = element_text(size = 15))
   ggsave(
-    paste("results/plots/fwer_restr_", fixed_scenario, ".pdf", sep = ""),
+    paste0("results/plots/", save_file_string_scenario, ".pdf"),
     fwer_plot,
     device = "pdf",
     width = 9,
@@ -96,18 +126,33 @@ overall_fwer_plot <- do.call(
   c(plot_list, common.legend = TRUE, legend = "right")
 )
 ggsave(
-  "results/plots/fwer_restr_all.pdf",
+  paste0("results/plots/", save_file_string, ".pdf"),
   overall_fwer_plot,
   device = "pdf",
   width = 12,
   height = 8
 )
 
+save_file_string <- "fwer_remaining"
+if (!is.na(override_r_PFS) & !is.na(override_r_OS)) {
+  save_file_string <- paste0(
+    save_file_string,
+    "_PFS",
+    override_r_PFS * 64,
+    "_OS",
+    override_r_OS * 64
+  )
+}
 
 ### SHOW REMAINING METHODS IN PLOT IN SUPPLEMENT
 plot_list <- list()
 for (i in 1:4) {
-  fixed_scenario <- i
+  save_file_string_scenario <- paste0(
+    save_file_string,
+    "_scenario",
+    i
+  )
+
   strategy_subset <- c(
     "REC",
     "EX/FIRST",
@@ -120,7 +165,7 @@ for (i in 1:4) {
   power_metrics_matrix <- do.call(rbind, power_metrics)
   plot_matrix <- power_metrics_matrix[
     which(
-      power_metrics_matrix$scenario == fixed_scenario &
+      power_metrics_matrix$scenario == i &
         power_metrics_matrix$Strategy %in% strategy_subset
     ),
   ]
@@ -153,7 +198,7 @@ for (i in 1:4) {
     ylab("FWER") +
     theme(text = element_text(size = 15))
   ggsave(
-    paste("results/plots/fwer_restr_", fixed_scenario, ".pdf", sep = ""),
+    paste0("results/plots/", save_file_string_scenario, ".pdf"),
     fwer_plot,
     device = "pdf",
     width = 9,
@@ -167,7 +212,7 @@ overall_fwer_plot <- do.call(
   c(plot_list, common.legend = TRUE, legend = "right")
 )
 ggsave(
-  "results/plots/fwer_remaining_allscenarios.pdf",
+  paste0("results/plots/", save_file_string, ".pdf"),
   overall_fwer_plot,
   device = "pdf",
   width = 12,
