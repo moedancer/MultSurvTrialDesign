@@ -1,0 +1,87 @@
+---
+title: "Efficient testing procedures for multiple time-to-event endpoints in group-sequential clinical trials"
+subtitle: "A practical comparison based on simulated data"
+author: "Moritz Fabian Danzer"
+date: "last-modified"
+bibliography: multsurvtrialdesign_bib.bib
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    theme: cosmo
+    self-contained: true
+execute:
+  echo: true
+  warning: false
+  message: false
+  error: false
+  freeze: auto
+knitr:
+  opts_chunk:
+    fig.path: "vignettes/figures/"
+---
+
+With this Markdown file, we provide a practical comparison of the multiple testing procedure introduced in @Danzer:2025 with already existing testing procedures. These procedures target settings with multiple primary time-to-event endpoints in a group-sequential clinical trial. While the method itself is generally applicable, we restrict ourselves to a setting with the two time-to-event endpoints progression-free survival (PFS) and overall survival (OS) and a trial design with one interim and one final analysis. The analysis cutoff dates are event-driven. As outlined in @Danzer:2025, both endpoints can be used to define these event-driven cutoffs. 
+
+We require the following R packages:
+
+* `simIDM` for simulating individual patient data (IPD) for the trial design considered here.
+* `rpact` for calculating the critical values for the group-sequential testing procedures.
+* `mvtnorm` for calculating multivariate normal probabilities.
+
+The computation of test statistics, estimation of correlations between those test statistics and the calculation of inflation factors for the local significance levels is done by functions defined in the R script `stat_and_var_calc.R`.
+
+```{r}
+#| label: setup
+
+# Load R packages
+library(simIDM)
+library(rpact)
+library(mvtnorm)
+
+# Source R scripts with functions for the analyses
+source("../R/stat_and_var_calc.R")
+
+```
+
+# Introduction
+
+As in the manuscript, we consider eight (?) different testing procedure. These can be described as follows:
+
+1. **BON**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis.
+2. **REC/LAST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/LAST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the alpha level for the OS hypothesis at the final analysis is increased to $\alpha$.
+3. **REC/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/FIRST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the OS hypothesis is tested at level $\rho_{\text{PFS}} \alpha$ at the interim analysis. If unsuccessful, the remaining level $\rho_{\text{OS}} \alpha$ is spent at the final analysis as in a $\alpha$-spending approach.
+4. **EX/LAST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/LAST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.
+5. **EX/FIRST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/FIRST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.
+6. **BON/GS**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{PFS}} \alpha$ according to an $\alpha$-spending approach based one the O'Brien-Fleming spending function of Lan and DeMets [see @Lan:83].  
+7. **REC/GS/LAST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{OS}} \alpha$ according to an $\alpha$-spending approach based one the O'Brien-Fleming spending function of Lan and DeMets [see @Lan:83]. As in the REC/LAST procedure, a rejection of the PFS hypothesis at the interim analysis allows to spend an additional alpha level of $\rho_{\text{PFS}} \alpha$ for the OS hypothesis at the final analysis.
+8. **REC/GS/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{OS}} \alpha$ according to an $\alpha$-spending approach based one the O'Brien-Fleming spending function of Lan and DeMets [see @Lan:83]. As in the REC/FIRST procedure, a rejection of the PFS hypothesis at the interim analysis allows to spend an additional alpha level of $\rho_{\text{PFS}} \alpha$ for the OS hypothesis at the interim analysis.
+9. **EX/GS/LAST**: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/LAST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.
+10. **EX/GS/FIRST**: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/FIRST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.
+11. **OS**: Testing procedure with a test of the OS hypothesis at level $\alpha$ at the final analysis without any interim analysis.
+
+# Trial design
+
+## Analysis dates
+
+## Simulated PFS- and OS-data
+
+We simulate data with the `simIDM` package. We use the first scenario of @Erdmann:2025 here.
+
+# Interim analysis
+
+## Estimated correlation matrix
+
+# Final analysis
+
+## Estimated correlation matrix
+
+# Summary
+
+# References
+
+::: {#refs}
+:::
