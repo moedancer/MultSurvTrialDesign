@@ -270,7 +270,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
       ##### DETERMINATION OF DECISIONS FOR DIFFERENT TESTING STRATEGIES #####
 
-      ### TESTING STRATEGY 1 ###
+      ### TESTING STRATEGY 1 (BON) ###
       # Test of PFS at interim analysis (level 0.005)
       # Test of OS at final analysis (level 0.02)
       # No propagation
@@ -279,10 +279,10 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       decisions[i, 1, "OS_a2"] <- (p_values[i, "OS_a2"] <=
         alpha * bretz_weight_os)
 
-      ### TESTING STRATEGY 2 ###
+      ### TESTING STRATEGY 2 (REC/LAST) ###
       # Test of PFS at interim analysis (level 0.005)
       # Test of OS at final analysis (level 0.02)
-      # with propagation
+      # with propagation to final analysis
       decisions[i, 2, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
         alpha * bretz_weight_pfs)
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
@@ -292,14 +292,30 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
           alpha * bretz_weight_os)
       }
 
-      ### TESTING STRATEGY 3 ###
+      ### TESTING STRATEGY 3 (REC/FIRST)###
+      # Test of PFS at interim analysis (level 0.005)
+      # Test of OS at final analysis (level 0.02)
+      # with propagation to interim analysis
+      decisions[i, 3, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
+        alpha * bretz_weight_pfs)
+      if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions[i, 3, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_addInterim[1])
+        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_addInterim[2])
+      } else {
+        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          alpha * bretz_weight_os)
+      }
+
+      ### TESTING STRATEGY 4 (EX/LAST)###
       # Test of PFS at interim analysis (level 0.005)
       # Test of OS at final analysis:
       #  - Exploit dependence with PFS if PFS not rejected
       #  - Propagate level of PFS if PFS rejected
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions[i, 3, "PFS_a1"] <- 1
-        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
+        decisions[i, 4, "PFS_a1"] <- 1
+        decisions[i, 4, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
           current_levels = alpha * bretz_weight_os,
@@ -311,11 +327,11 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("PFS_a1", "OS_a2")
           ]
         )
-        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 4, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           alpha * bretz_weight_os * temp_factor)
       }
 
-      ### TESTING STRATEGY 4 ###
+      ### TESTING STRATEGY 5 (EX/FIRST) ###
       # Test of PFS at interim analysis (level 0.005)
       # Test of OS:
       #  - at interim and final analysis if PFS successful
@@ -323,8 +339,8 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       #  - only at final if PFS not successful
       #    (exploit dependence)
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions[i, 4, "PFS_a1"] <- 1
-        decisions[i, 4, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+        decisions[i, 5, "PFS_a1"] <- 1
+        decisions[i, 5, "OS_a1"] <- (p_values[i, "OS_a1"] <=
           alpha * bretz_weight_pfs)
         temp_factor <- inflation_factor(
           current_levels = alpha * bretz_weight_os,
@@ -336,7 +352,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("OS_a1", "OS_a2")
           ]
         )
-        decisions[i, 4, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 5, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           alpha * bretz_weight_os * temp_factor)
       } else {
         temp_factor <- inflation_factor(
@@ -349,44 +365,68 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("PFS_a1", "OS_a2")
           ]
         )
-        decisions[i, 4, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 5, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           alpha * bretz_weight_os * temp_factor)
       }
 
-      ### TESTING STRATEGY 5 ###
+      ### TESTING STRATEGY 6 (BON/GS)###
       # Test of PFS at interim analysis (level  0.005)
       # Group-sequential test of OS:
       #   Bounds as specified in Erdmann et al.
-      decisions[i, 5, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
+      decisions[i, 6, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
         alpha * bretz_weight_pfs)
-      decisions[i, 5, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+      decisions[i, 6, "OS_a1"] <- (p_values[i, "OS_a1"] <=
         os_stageLevels_corrected[1])
-      decisions[i, 5, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+      decisions[i, 6, "OS_a2"] <- (p_values[i, "OS_a2"] <=
         os_stageLevels_corrected[2])
 
-      ### TESTING STRATEGY 6 ###
+      ### TESTING STRATEGY 7 (REC/GS/LAST) ###
       # Test of PFS at interim analysis (level  0.005)
       # Group-sequential test of OS:
       #   Bounds as specified in Erdmann et al.
-      # Propagation from PFS to OS possible
+      # Propagation from PFS to OS (in last analysis) and OS to PFS possible
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions[i, 6, "PFS_a1"] <- TRUE
-        decisions[i, 6, "OS_a1"] <- (p_values[i, "OS_a1"] <= os_stageLevels[1])
-        decisions[i, 6, "OS_a2"] <- (p_values[i, "OS_a2"] <= os_stageLevels[2])
+        decisions[i, 7, "PFS_a1"] <- TRUE
+        decisions[i, 7, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_shiftLast[1])
+        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_shiftLast[2])
       } else if (p_values[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
-        decisions[i, 6, "OS_a1"] <- TRUE
-        decisions[i, 6, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+        decisions[i, 7, "OS_a1"] <- TRUE
+        decisions[i, 7, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
       } else {
-        decisions[i, 6, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+        decisions[i, 7, "OS_a1"] <- (p_values[i, "OS_a1"] <=
           os_stageLevels_corrected[1])
-        decisions[i, 6, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           os_stageLevels_corrected[2])
       }
 
-      ### TESTING STRATEGY 7 ###
+      ### TESTING STRATEGY 8 (REC/GS/FIRST) ###
+      # Test of PFS at interim analysis (level  0.005)
+      # Group-sequential test of OS:
+      #   Bounds as specified in Erdmann et al.
+      # Propagation from PFS to OS (in interim analysis) and OS to PFS possible
+      if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions[i, 8, "PFS_a1"] <- TRUE
+        decisions[i, 8, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_shiftInterim[1])
+        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_shiftInterim[2])
+      } else if (p_values[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
+        decisions[i, 8, "OS_a1"] <- TRUE
+        decisions[i, 8, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+      } else {
+        decisions[i, 8, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_corrected[1])
+        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_corrected[2])
+      }
+
+      ### TESTING STRATEGY 9 (EX/GS/LAST) ###
       # Test of PFS at interim analysis (level  0.005)
       # Group-sequential test of OS:
       #   Increase alpha to be spent at final analysis by 0.005 if PFS rejected
+      # Exploit dependence at interim and final analysis as long as no hypothesis is rejected
       temp_factor_interim <- inflation_factor(
         current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
         available_level = alpha * bretz_weight_pfs + os_alphaIncr_corrected[1],
@@ -399,8 +439,8 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       if (
         p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs * temp_factor_interim
       ) {
-        decisions[i, 7, "PFS_a1"] <- 1
-        decisions[i, 7, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+        decisions[i, 9, "PFS_a1"] <- TRUE
+        decisions[i, 9, "OS_a1"] <- (p_values[i, "OS_a1"] <=
           os_stageLevels_corrected[1])
         temp_factor <- inflation_factor(
           current_levels = alpha - os_stageLevels_corrected[1],
@@ -412,12 +452,12 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("OS_a1", "OS_a2")
           ]
         )
-        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 9, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           temp_factor * (alpha - os_stageLevels_corrected[1]))
       } else if (
         p_values[i, "OS_a1"] <= os_alphaIncr_corrected[1] * temp_factor_interim
       ) {
-        decisions[i, 7, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+        decisions[i, 9, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
           current_levels = os_alphaIncr_corrected[2],
@@ -430,14 +470,15 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("PFS_a1", "OS_a1", "OS_a2")
           ]
         )
-        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 9, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           temp_factor * os_alphaIncr_corrected[2])
       }
 
-      ### TESTING STRATEGY 8 ###
+      ### TESTING STRATEGY 10 (EX/GS/FIRST) ###
       # Test of PFS at interim analysis (level  0.005)
       # Group-sequential test of OS:
       #   Increase alpha to be spent at interim and final analysis by 0.005 if PFS rejected
+      # Exploit dependence at interim and final analysis as long as no hypothesis is rejected
       temp_factor_interim <- inflation_factor(
         current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
         available_level = alpha * bretz_weight_pfs + os_alphaIncr_corrected[1],
@@ -450,8 +491,8 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       if (
         p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs * temp_factor_interim
       ) {
-        decisions[i, 8, "PFS_a1"] <- 1
-        decisions[i, 8, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+        decisions[i, 10, "PFS_a1"] <- 1
+        decisions[i, 10, "OS_a1"] <- (p_values[i, "OS_a1"] <=
           os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)
         temp_factor <- inflation_factor(
           current_levels = alpha -
@@ -465,13 +506,13 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("OS_a1", "OS_a2")
           ]
         )
-        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 10, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           temp_factor *
             (alpha - (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)))
       } else if (
         p_values[i, "OS_a1"] <= os_alphaIncr_corrected[1] * temp_factor_interim
       ) {
-        decisions[i, 8, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+        decisions[i, 10, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
           current_levels = os_alphaIncr_corrected[2],
@@ -484,13 +525,13 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("PFS_a1", "OS_a1", "OS_a2")
           ]
         )
-        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 10, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           temp_factor * os_alphaIncr_corrected[2])
       }
 
-      ### TESTING STRATEGY 9 ###
+      ### TESTING STRATEGY 11 (OS) ###
       # Only test OS at final analysis at full level
-      decisions[i, 9, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
+      decisions[i, 11, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
     }
 
     metrics_names <- c("Rej_PFS", "Rej_OS", "Rej_One", "Rej_Both", "Early_Stop")
