@@ -133,72 +133,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
     ### SET UP CLOSED TESTING AND GROUP-SEQUENTIAL PROCEDURES
     bretz_weight_pfs <- 1 / 5
     bretz_weight_os <- 4 / 5
-
     alpha <- 0.025
-
-    # Group-sequential design for OS at uncorrected level
-    os_gs_design <- getDesignGroupSequential(
-      kMax = 2,
-      alpha = alpha,
-      sided = 1,
-      typeOfDesign = "asOF",
-      informationRates = c(0.4, 1)
-    )
-    os_stageLevels <- os_gs_design$stageLevels
-    os_alphaSpent <- os_gs_design$alphaSpent
-    os_alphaIncr <- (c(os_alphaSpent, alpha * bretz_weight_os) -
-      c(0, os_alphaSpent))[1:2]
-    os_criticalValues <- os_gs_design$criticalValues
-
-    # Group-sequential design for OS at corrected level
-    os_gs_design_corrected <- getDesignGroupSequential(
-      kMax = 2,
-      alpha = alpha * bretz_weight_os,
-      sided = 1,
-      typeOfDesign = "asOF",
-      informationRates = c(0.4, 1)
-    )
-    os_stageLevels_corrected <- os_gs_design_corrected$stageLevels
-    os_alphaSpent_corrected <- os_gs_design_corrected$alphaSpent
-    os_alphaIncr_corrected <- (c(
-      os_alphaSpent_corrected,
-      alpha * bretz_weight_os
-    ) -
-      c(0, os_alphaSpent_corrected))[1:2]
-    os_criticalValues_corrected <- os_gs_design_corrected$criticalValues
-
-    # Group-sequential design for OS with additional weight shifted to final analysis
-    os_gs_design_shiftLast <- getDesignGroupSequential(
-      kMax = 2,
-      alpha = alpha,
-      sided = 1,
-      typeOfDesign = "asUser",
-      userAlphaSpending = c(
-        os_alphaSpent_corrected[1],
-        os_alphaSpent_corrected[2] + alpha * bretz_weight_pfs
-      ),
-      informationRates = c(0.4, 1)
-    )
-    os_stageLevels_shiftLast <- os_gs_design_shiftLast$stageLevels
-    os_alphaSpent_shiftLast <- os_gs_design_shiftLast$alphaSpent
-    os_alphaIncr_shiftLast <- (c(os_alphaSpent_shiftLast, alpha) -
-      c(0, os_alphaSpent_shiftLast))[1:2]
-    os_criticalValues_shiftLast <- os_gs_design_shiftLast$criticalValues
-
-    # Group-sequential design for OS with additional weight shifted to interim analysis
-    os_gs_design_shiftInterim <- getDesignGroupSequential(
-      kMax = 2,
-      alpha = alpha,
-      sided = 1,
-      typeOfDesign = "asUser",
-      userAlphaSpending = os_alphaSpent_corrected + alpha * bretz_weight_pfs,
-      informationRates = c(0.4, 1)
-    )
-    os_stageLevels_shiftInterim <- os_gs_design_shiftInterim$stageLevels
-    os_alphaSpent_shiftInterim <- os_gs_design_shiftInterim$alphaSpent
-    os_alphaIncr_shiftInterim <- (c(os_alphaSpent_shiftInterim, alpha) -
-      c(0, os_alphaSpent_shiftInterim))[1:2]
-    os_criticalValues_shiftInterim <- os_gs_design_shiftInterim$criticalValues
 
     for (i in seq(sim_num)) {
       Sim <- getDatasetWideFormat(getOneClinicalTrial(
@@ -219,16 +154,91 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
         typeEvent = "OS"
       )
 
-      calDatePFS <- getTimePoint(
-        data = Sim,
-        eventNum = nEventPFS,
-        typeEvent = "PFS"
+      # Calculate information fraction for OS at interim analysis
+      info_fraction_os <- sum(studyCensored1$OSevent) / nEventOS
+
+      ### COMPUTE REJECTION BOUNDS FOR ALPHA-SPENDING APPROACHES BASED ON INFORMATION FRACTION
+      # Group-sequential design for OS at uncorrected level
+      os_gs_design <- getDesignGroupSequential(
+        kMax = 2,
+        alpha = alpha,
+        sided = 1,
+        typeOfDesign = "asOF",
+        informationRates = c(info_fraction_os, 1)
       )
-      calDateOS <- getTimePoint(
-        data = Sim,
-        eventNum = nEventOS,
-        typeEvent = "OS"
+      os_stageLevels <- os_gs_design$stageLevels
+      os_alphaSpent <- os_gs_design$alphaSpent
+      os_alphaIncr <- (c(os_alphaSpent, alpha * bretz_weight_os) -
+        c(0, os_alphaSpent))[1:2]
+      os_criticalValues <- os_gs_design$criticalValues
+
+      # Group-sequential design for OS at corrected level
+      os_gs_design_corrected <- getDesignGroupSequential(
+        kMax = 2,
+        alpha = alpha * bretz_weight_os,
+        sided = 1,
+        typeOfDesign = "asOF",
+        informationRates = c(info_fraction_os, 1)
       )
+      os_stageLevels_corrected <- os_gs_design_corrected$stageLevels
+      os_alphaSpent_corrected <- os_gs_design_corrected$alphaSpent
+      os_alphaIncr_corrected <- (c(
+        os_alphaSpent_corrected,
+        alpha * bretz_weight_os
+      ) -
+        c(0, os_alphaSpent_corrected))[1:2]
+      os_criticalValues_corrected <- os_gs_design_corrected$criticalValues
+
+      # Group-sequential design for OS using only propagation at interim analysis
+      os_gs_design_addInterim <- getDesignGroupSequential(
+        kMax = 2,
+        alpha = alpha,
+        sided = 1,
+        typeOfDesign = "asUser",
+        userAlphaSpending = c(
+          alpha * bretz_weight_pfs,
+          alpha
+        ),
+        informationRates = c(info_fraction_os, 1)
+      )
+      os_stageLevels_addInterim <- os_gs_design_addInterim$stageLevels
+      os_alphaSpent_addInterim <- os_gs_design_addInterim$alphaSpent
+      os_alphaIncr_addInterim <- (c(os_alphaSpent_addInterim, alpha) -
+        c(0, os_alphaSpent_addInterim))[1:2]
+      os_criticalValues_addInterim <- os_gs_design_addInterim$criticalValues
+
+      # Group-sequential design for OS with additional weight shifted to final analysis
+      os_gs_design_shiftLast <- getDesignGroupSequential(
+        kMax = 2,
+        alpha = alpha,
+        sided = 1,
+        typeOfDesign = "asUser",
+        userAlphaSpending = c(
+          os_alphaSpent_corrected[1],
+          os_alphaSpent_corrected[2] + alpha * bretz_weight_pfs
+        ),
+        informationRates = c(info_fraction_os, 1)
+      )
+      os_stageLevels_shiftLast <- os_gs_design_shiftLast$stageLevels
+      os_alphaSpent_shiftLast <- os_gs_design_shiftLast$alphaSpent
+      os_alphaIncr_shiftLast <- (c(os_alphaSpent_shiftLast, alpha) -
+        c(0, os_alphaSpent_shiftLast))[1:2]
+      os_criticalValues_shiftLast <- os_gs_design_shiftLast$criticalValues
+
+      # Group-sequential design for OS with additional weight shifted to interim analysis
+      os_gs_design_shiftInterim <- getDesignGroupSequential(
+        kMax = 2,
+        alpha = alpha,
+        sided = 1,
+        typeOfDesign = "asUser",
+        userAlphaSpending = os_alphaSpent_corrected + alpha * bretz_weight_pfs,
+        informationRates = c(info_fraction_os, 1)
+      )
+      os_stageLevels_shiftInterim <- os_gs_design_shiftInterim$stageLevels
+      os_alphaSpent_shiftInterim <- os_gs_design_shiftInterim$alphaSpent
+      os_alphaIncr_shiftInterim <- (c(os_alphaSpent_shiftInterim, alpha) -
+        c(0, os_alphaSpent_shiftInterim))[1:2]
+      os_criticalValues_shiftInterim <- os_gs_design_shiftInterim$criticalValues
 
       complete_data_temp <- merge(
         studyCensored1,

@@ -167,7 +167,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
     drprate <- 0.1
     drptime <- 12
 
-    ### SET UP CLOSED TESTING AND GROUP-SEQUENTIAL PROCEDURES
+    ### SET UP CLOSED TESTING
     bretz_weight_pfs <- 1 / 5
     bretz_weight_os <- 4 / 5
     alpha <- 0.025
@@ -198,7 +198,8 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       # Calculate information fraction for OS at interim analysis
       info_fraction_os <- sum(studyCensored1$OSevent) / nEventOS
 
-      # Compute rejection bounds for alpha-spending approaches based on information fraction
+      #### COMPUTE REJECTION BOUNDS FOR ALPHA-SPENDING APPROACHES BASED ON INFORMATION FRACTION
+      # Group-sequential design for OS at uncorrected level
       os_gs_design <- getDesignGroupSequential(
         kMax = 2,
         alpha = alpha,
