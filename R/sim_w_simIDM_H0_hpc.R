@@ -230,6 +230,24 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
         c(0, os_alphaSpent_corrected))[1:2]
       os_criticalValues_corrected <- os_gs_design_corrected$criticalValues
 
+      # Group-sequential design for OS using only propagation at interim analysis
+      os_gs_design_addInterim <- getDesignGroupSequential(
+        kMax = 2,
+        alpha = alpha,
+        sided = 1,
+        typeOfDesign = "asUser",
+        userAlphaSpending = c(
+          alpha * bretz_weight_pfs,
+          alpha
+        ),
+        informationRates = c(info_fraction_os, 1)
+      )
+      os_stageLevels_addInterim <- os_gs_design_addInterim$stageLevels
+      os_alphaSpent_addInterim <- os_gs_design_addInterim$alphaSpent
+      os_alphaIncr_addInterim <- (c(os_alphaSpent_addInterim, alpha) -
+        c(0, os_alphaSpent_addInterim))[1:2]
+      os_criticalValues_addInterim <- os_gs_design_addInterim$criticalValues
+
       # Group-sequential design for OS with additional weight shifted to final analysis
       os_gs_design_shiftLast <- getDesignGroupSequential(
         kMax = 2,
@@ -355,7 +373,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
       ##### DETERMINATION OF DECISIONS FOR DIFFERENT TESTING STRATEGIES #####
 
-      ### TESTING STRATEGY 1 ###
+      ### TESTING STRATEGY 1 (BON) ###
       # Test of PFS at interim analysis (level 0.005)
       # Test of OS at final analysis (level 0.02)
       # No propagation
@@ -369,10 +387,10 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       decisions_frailty[i, 1, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
         alpha * bretz_weight_os)
 
-      ### TESTING STRATEGY 2 ###
+      ### TESTING STRATEGY 2 (REC/LAST) ###
       # Test of PFS at interim analysis (level 0.005)
       # Test of OS at final analysis (level 0.02)
-      # with propagation
+      # with propagation to final analysis
       decisions[i, 2, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
         alpha * bretz_weight_pfs)
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
@@ -392,71 +410,42 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
           alpha * bretz_weight_os)
       }
 
-      ### TESTING STRATEGY 3 ###
+      ### TESTING STRATEGY 3 (REC/FIRST)###
+      # Test of PFS at interim analysis (level 0.005)
+      # Test of OS at final analysis (level 0.02)
+      # with propagation to interim analysis
+      decisions[i, 3, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
+        alpha * bretz_weight_pfs)
+      if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions[i, 3, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_addInterim[1])
+        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_addInterim[2])
+      } else {
+        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          alpha * bretz_weight_os)
+      }
+
+      decisions_frailty[i, 3, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
+        alpha * bretz_weight_pfs)
+      if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions_frailty[i, 3, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+          os_stageLevels_addInterim[1])
+        decisions_frailty[i, 3, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          os_stageLevels_addInterim[2])
+      } else {
+        decisions_frailty[i, 3, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          alpha * bretz_weight_os)
+      }
+
+      ### TESTING STRATEGY 4 (EX/LAST)###
       # Test of PFS at interim analysis (level 0.005)
       # Test of OS at final analysis:
       #  - Exploit dependence with PFS if PFS not rejected
       #  - Propagate level of PFS if PFS rejected
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions[i, 3, "PFS_a1"] <- 1
-        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
-      } else {
-        temp_factor <- inflation_factor(
-          current_levels = alpha * bretz_weight_os,
-          previous_levels = alpha * bretz_weight_pfs,
-          available_level = alpha,
-          covariance_matrix = var_ests[
-            i,
-            c("PFS_a1", "OS_a2"),
-            c("PFS_a1", "OS_a2")
-          ]
-        )
-        decisions[i, 3, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-          alpha * bretz_weight_os * temp_factor)
-      }
-
-      if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions_frailty[i, 3, "PFS_a1"] <- 1
-        decisions_frailty[i, 3, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          alpha)
-      } else {
-        temp_factor <- inflation_factor(
-          current_levels = alpha * bretz_weight_os,
-          previous_levels = alpha * bretz_weight_pfs,
-          available_level = alpha,
-          covariance_matrix = var_ests_frailty[
-            i,
-            c("PFS_a1", "OS_a2"),
-            c("PFS_a1", "OS_a2")
-          ]
-        )
-        decisions_frailty[i, 3, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          alpha * bretz_weight_os * temp_factor)
-      }
-
-      ### TESTING STRATEGY 4 ###
-      # Test of PFS at interim analysis (level 0.005)
-      # Test of OS:
-      #  - at interim and final analysis if PFS successful
-      #    (spend 0.005 at interim, rest at final)
-      #  - only at final if PFS not successful
-      #    (exploit dependence)
-      if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
         decisions[i, 4, "PFS_a1"] <- 1
-        decisions[i, 4, "OS_a1"] <- (p_values[i, "OS_a1"] <=
-          alpha * bretz_weight_pfs)
-        temp_factor <- inflation_factor(
-          current_levels = alpha * bretz_weight_os,
-          previous_levels = alpha * bretz_weight_pfs,
-          available_level = alpha,
-          covariance_matrix = var_ests[
-            i,
-            c("OS_a1", "OS_a2"),
-            c("OS_a1", "OS_a2")
-          ]
-        )
-        decisions[i, 4, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-          alpha * bretz_weight_os * temp_factor)
+        decisions[i, 4, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
           current_levels = alpha * bretz_weight_os,
@@ -474,20 +463,8 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
       if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
         decisions_frailty[i, 4, "PFS_a1"] <- 1
-        decisions_frailty[i, 4, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
-          alpha * bretz_weight_pfs)
-        temp_factor <- inflation_factor(
-          current_levels = alpha * bretz_weight_os,
-          previous_levels = alpha * bretz_weight_pfs,
-          available_level = alpha,
-          covariance_matrix = var_ests_frailty[
-            i,
-            c("OS_a1", "OS_a2"),
-            c("OS_a1", "OS_a2")
-          ]
-        )
         decisions_frailty[i, 4, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          alpha * bretz_weight_os * temp_factor)
+          alpha)
       } else {
         temp_factor <- inflation_factor(
           current_levels = alpha * bretz_weight_os,
@@ -503,165 +480,174 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
           alpha * bretz_weight_os * temp_factor)
       }
 
-      ### TESTING STRATEGY 5 ###
-      # Test of PFS at interim analysis (level  0.005)
-      # Group-sequential test of OS:
-      #   Bounds as specified in Erdmann et al.
-      decisions[i, 5, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
-        alpha * bretz_weight_pfs)
-      decisions[i, 5, "OS_a1"] <- (p_values[i, "OS_a1"] <=
-        os_stageLevels_corrected[1])
-      decisions[i, 5, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-        os_stageLevels_corrected[2])
-
-      decisions_frailty[i, 5, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
-        alpha * bretz_weight_pfs)
-      decisions_frailty[i, 5, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
-        os_stageLevels_corrected[1])
-      decisions_frailty[i, 5, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-        os_stageLevels_corrected[2])
-
-      ### TESTING STRATEGY 6 ###
-      # Test of PFS at interim analysis (level  0.005)
-      # Group-sequential test of OS:
-      #   Bounds as specified in Erdmann et al.
-      # Propagation from PFS to OS and OS to PFS possible
+      ### TESTING STRATEGY 5 (EX/FIRST) ###
+      # Test of PFS at interim analysis (level 0.005)
+      # Test of OS:
+      #  - at interim and final analysis if PFS successful
+      #    (spend 0.005 at interim, rest at final)
+      #  - only at final if PFS not successful
+      #    (exploit dependence)
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions[i, 6, "PFS_a1"] <- TRUE
-        decisions[i, 6, "OS_a1"] <- (p_values[i, "OS_a1"] <= os_stageLevels[1])
-        decisions[i, 6, "OS_a2"] <- (p_values[i, "OS_a2"] <= os_stageLevels[2])
-      } else if (p_values[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
-        decisions[i, 6, "OS_a1"] <- TRUE
-        decisions[i, 6, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+        decisions[i, 5, "PFS_a1"] <- 1
+        decisions[i, 5, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          alpha * bretz_weight_pfs)
+        temp_factor <- inflation_factor(
+          current_levels = alpha * bretz_weight_os,
+          previous_levels = alpha * bretz_weight_pfs,
+          available_level = alpha,
+          covariance_matrix = var_ests[
+            i,
+            c("OS_a1", "OS_a2"),
+            c("OS_a1", "OS_a2")
+          ]
+        )
+        decisions[i, 5, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          alpha * bretz_weight_os * temp_factor)
       } else {
-        decisions[i, 6, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+        temp_factor <- inflation_factor(
+          current_levels = alpha * bretz_weight_os,
+          previous_levels = alpha * bretz_weight_pfs,
+          available_level = alpha,
+          covariance_matrix = var_ests[
+            i,
+            c("PFS_a1", "OS_a2"),
+            c("PFS_a1", "OS_a2")
+          ]
+        )
+        decisions[i, 5, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          alpha * bretz_weight_os * temp_factor)
+      }
+
+      if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions_frailty[i, 5, "PFS_a1"] <- 1
+        decisions_frailty[i, 5, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+          alpha * bretz_weight_pfs)
+        temp_factor <- inflation_factor(
+          current_levels = alpha * bretz_weight_os,
+          previous_levels = alpha * bretz_weight_pfs,
+          available_level = alpha,
+          covariance_matrix = var_ests_frailty[
+            i,
+            c("OS_a1", "OS_a2"),
+            c("OS_a1", "OS_a2")
+          ]
+        )
+        decisions_frailty[i, 5, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          alpha * bretz_weight_os * temp_factor)
+      } else {
+        temp_factor <- inflation_factor(
+          current_levels = alpha * bretz_weight_os,
+          previous_levels = alpha * bretz_weight_pfs,
+          available_level = alpha,
+          covariance_matrix = var_ests_frailty[
+            i,
+            c("PFS_a1", "OS_a2"),
+            c("PFS_a1", "OS_a2")
+          ]
+        )
+        decisions_frailty[i, 5, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          alpha * bretz_weight_os * temp_factor)
+      }
+
+      ### TESTING STRATEGY 6 (BON/GS)###
+      # Test of PFS at interim analysis (level  0.005)
+      # Group-sequential test of OS:
+      #   Bounds as specified in Erdmann et al.
+      decisions[i, 6, "PFS_a1"] <- (p_values[i, "PFS_a1"] <=
+        alpha * bretz_weight_pfs)
+      decisions[i, 6, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+        os_stageLevels_corrected[1])
+      decisions[i, 6, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        os_stageLevels_corrected[2])
+
+      decisions_frailty[i, 6, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
+        alpha * bretz_weight_pfs)
+      decisions_frailty[i, 6, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+        os_stageLevels_corrected[1])
+      decisions_frailty[i, 6, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+        os_stageLevels_corrected[2])
+
+      ### TESTING STRATEGY 7 (REC/GS/LAST) ###
+      # Test of PFS at interim analysis (level  0.005)
+      # Group-sequential test of OS:
+      #   Bounds as specified in Erdmann et al.
+      # Propagation from PFS to OS (in last analysis) and OS to PFS possible
+      if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions[i, 7, "PFS_a1"] <- TRUE
+        decisions[i, 7, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_shiftLast[1])
+        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_shiftLast[2])
+      } else if (p_values[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
+        decisions[i, 7, "OS_a1"] <- TRUE
+        decisions[i, 7, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+      } else {
+        decisions[i, 7, "OS_a1"] <- (p_values[i, "OS_a1"] <=
           os_stageLevels_corrected[1])
-        decisions[i, 6, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           os_stageLevels_corrected[2])
       }
 
       if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions_frailty[i, 6, "PFS_a1"] <- TRUE
-        decisions_frailty[i, 6, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
-          os_stageLevels[1])
-        decisions_frailty[i, 6, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          os_stageLevels[2])
-      } else if (p_values_frailty[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
-        decisions_frailty[i, 6, "OS_a1"] <- TRUE
-        decisions_frailty[i, 6, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
-          alpha)
-      } else {
-        decisions_frailty[i, 6, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
-          os_stageLevels_corrected[1])
-        decisions_frailty[i, 6, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          os_stageLevels_corrected[2])
-      }
-
-      ### TESTING STRATEGY 7 ###
-      # Test of PFS at interim analysis (level  0.005)
-      # Group-sequential test of OS:
-      #   Increase alpha to be spent at final analysis by 0.005 if PFS rejected
-      temp_factor_interim <- inflation_factor(
-        current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
-        available_level = alpha * bretz_weight_pfs + os_alphaIncr_corrected[1],
-        covariance_matrix = var_ests[
-          i,
-          c("PFS_a1", "OS_a1"),
-          c("PFS_a1", "OS_a1")
-        ]
-      )
-      if (
-        p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs * temp_factor_interim
-      ) {
-        decisions[i, 7, "PFS_a1"] <- 1
-        decisions[i, 7, "OS_a1"] <- (p_values[i, "OS_a1"] <=
-          os_stageLevels_corrected[1])
-        temp_factor <- inflation_factor(
-          current_levels = alpha - os_stageLevels_corrected[1],
-          previous_levels = os_stageLevels_corrected[1],
-          available_level = alpha,
-          covariance_matrix = var_ests[
-            i,
-            c("OS_a1", "OS_a2"),
-            c("OS_a1", "OS_a2")
-          ]
-        )
-        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-          temp_factor * (alpha - os_stageLevels_corrected[1]))
-      } else if (
-        p_values[i, "OS_a1"] <= os_alphaIncr_corrected[1] * temp_factor_interim
-      ) {
-        decisions[i, 7, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
-      } else {
-        temp_factor <- inflation_factor(
-          current_levels = os_alphaIncr_corrected[2],
-          previous_levels = temp_factor_interim *
-            c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
-          available_level = alpha,
-          covariance_matrix = var_ests[
-            i,
-            c("PFS_a1", "OS_a1", "OS_a2"),
-            c("PFS_a1", "OS_a1", "OS_a2")
-          ]
-        )
-        decisions[i, 7, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-          temp_factor * os_alphaIncr_corrected[2])
-      }
-
-      temp_factor_interim <- inflation_factor(
-        current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
-        available_level = alpha * bretz_weight_pfs + os_alphaIncr_corrected[1],
-        covariance_matrix = var_ests_frailty[
-          i,
-          c("PFS_a1", "OS_a1"),
-          c("PFS_a1", "OS_a1")
-        ]
-      )
-      if (
-        p_values_frailty[i, "PFS_a1"] <=
-          alpha * bretz_weight_pfs * temp_factor_interim
-      ) {
-        decisions_frailty[i, 7, "PFS_a1"] <- 1
+        decisions_frailty[i, 7, "PFS_a1"] <- TRUE
         decisions_frailty[i, 7, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
-          os_stageLevels_corrected[1])
-        temp_factor <- inflation_factor(
-          current_levels = alpha - os_stageLevels_corrected[1],
-          previous_levels = os_stageLevels_corrected[1],
-          available_level = alpha,
-          covariance_matrix = var_ests_frailty[
-            i,
-            c("OS_a1", "OS_a2"),
-            c("OS_a1", "OS_a2")
-          ]
-        )
+          os_stageLevels_shiftLast[1])
         decisions_frailty[i, 7, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          temp_factor * (alpha - os_stageLevels_corrected[1]))
-      } else if (
-        p_values_frailty[i, "OS_a1"] <=
-          os_alphaIncr_corrected[1] * temp_factor_interim
-      ) {
+          os_stageLevels_shiftLast[2])
+      } else if (p_values_frailty[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
+        decisions_frailty[i, 7, "OS_a1"] <- TRUE
         decisions_frailty[i, 7, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
           alpha)
       } else {
-        temp_factor <- inflation_factor(
-          current_levels = os_alphaIncr_corrected[2],
-          previous_levels = temp_factor_interim *
-            c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
-          available_level = alpha,
-          covariance_matrix = var_ests_frailty[
-            i,
-            c("PFS_a1", "OS_a1", "OS_a2"),
-            c("PFS_a1", "OS_a1", "OS_a2")
-          ]
-        )
+        decisions_frailty[i, 7, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+          os_stageLevels_corrected[1])
         decisions_frailty[i, 7, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          temp_factor * os_alphaIncr_corrected[2])
+          os_stageLevels_corrected[2])
       }
 
-      ### TESTING STRATEGY 8 ###
+      ### TESTING STRATEGY 8 (REC/GS/FIRST) ###
       # Test of PFS at interim analysis (level  0.005)
       # Group-sequential test of OS:
-      #   Increase alpha to be spent at interim and final analysis by 0.005 if PFS rejected
+      #   Bounds as specified in Erdmann et al.
+      # Propagation from PFS to OS (in interim analysis) and OS to PFS possible
+      if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions[i, 8, "PFS_a1"] <- TRUE
+        decisions[i, 8, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_shiftInterim[1])
+        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_shiftInterim[2])
+      } else if (p_values[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
+        decisions[i, 8, "OS_a1"] <- TRUE
+        decisions[i, 8, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+      } else {
+        decisions[i, 8, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_corrected[1])
+        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          os_stageLevels_corrected[2])
+      }
+
+      if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
+        decisions_frailty[i, 8, "PFS_a1"] <- TRUE
+        decisions_frailty[i, 8, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+          os_stageLevels_shiftInterim[1])
+        decisions_frailty[i, 8, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          os_stageLevels_shiftInterim[2])
+      } else if (p_values_frailty[i, "OS_a1"] <= os_stageLevels_corrected[1]) {
+        decisions_frailty[i, 8, "OS_a1"] <- TRUE
+        decisions_frailty[i, 8, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
+          alpha)
+      } else {
+        decisions_frailty[i, 8, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+          os_stageLevels_corrected[1])
+        decisions_frailty[i, 8, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          os_stageLevels_corrected[2])
+      }
+
+      ### TESTING STRATEGY 9 (EX/GS/LAST) ###
+      # Test of PFS at interim analysis (level  0.005)
+      # Group-sequential test of OS:
+      #   Increase alpha to be spent at final analysis by 0.005 if PFS rejected
+      # Exploit dependence at interim and final analysis as long as no hypothesis is rejected
       temp_factor_interim <- inflation_factor(
         current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
         available_level = alpha * bretz_weight_pfs + os_alphaIncr_corrected[1],
@@ -674,14 +660,12 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       if (
         p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs * temp_factor_interim
       ) {
-        decisions[i, 8, "PFS_a1"] <- 1
-        decisions[i, 8, "OS_a1"] <- (p_values[i, "OS_a1"] <=
-          os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)
+        decisions[i, 9, "PFS_a1"] <- TRUE
+        decisions[i, 9, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_corrected[1])
         temp_factor <- inflation_factor(
-          current_levels = alpha -
-            (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs),
-          previous_levels = os_stageLevels_corrected[1] +
-            alpha * bretz_weight_pfs,
+          current_levels = alpha - os_stageLevels_corrected[1],
+          previous_levels = os_stageLevels_corrected[1],
           available_level = alpha,
           covariance_matrix = var_ests[
             i,
@@ -689,13 +673,12 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("OS_a1", "OS_a2")
           ]
         )
-        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-          temp_factor *
-            (alpha - (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)))
+        decisions[i, 9, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          temp_factor * (alpha - os_stageLevels_corrected[1]))
       } else if (
         p_values[i, "OS_a1"] <= os_alphaIncr_corrected[1] * temp_factor_interim
       ) {
-        decisions[i, 8, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+        decisions[i, 9, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
           current_levels = os_alphaIncr_corrected[2],
@@ -708,7 +691,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("PFS_a1", "OS_a1", "OS_a2")
           ]
         )
-        decisions[i, 8, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+        decisions[i, 9, "OS_a2"] <- (p_values[i, "OS_a2"] <=
           temp_factor * os_alphaIncr_corrected[2])
       }
 
@@ -725,14 +708,12 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
         p_values_frailty[i, "PFS_a1"] <=
           alpha * bretz_weight_pfs * temp_factor_interim
       ) {
-        decisions_frailty[i, 8, "PFS_a1"] <- 1
-        decisions_frailty[i, 8, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
-          os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)
+        decisions_frailty[i, 9, "PFS_a1"] <- 1
+        decisions_frailty[i, 9, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+          os_stageLevels_corrected[1])
         temp_factor <- inflation_factor(
-          current_levels = alpha -
-            (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs),
-          previous_levels = os_stageLevels_corrected[1] +
-            alpha * bretz_weight_pfs,
+          current_levels = alpha - os_stageLevels_corrected[1],
+          previous_levels = os_stageLevels_corrected[1],
           available_level = alpha,
           covariance_matrix = var_ests_frailty[
             i,
@@ -740,14 +721,13 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("OS_a1", "OS_a2")
           ]
         )
-        decisions_frailty[i, 8, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
-          temp_factor *
-            (alpha - (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)))
+        decisions_frailty[i, 9, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          temp_factor * (alpha - os_stageLevels_corrected[1]))
       } else if (
         p_values_frailty[i, "OS_a1"] <=
           os_alphaIncr_corrected[1] * temp_factor_interim
       ) {
-        decisions_frailty[i, 8, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
+        decisions_frailty[i, 9, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
           alpha)
       } else {
         temp_factor <- inflation_factor(
@@ -761,15 +741,123 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
             c("PFS_a1", "OS_a1", "OS_a2")
           ]
         )
-        decisions_frailty[i, 8, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+        decisions_frailty[i, 9, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
           temp_factor * os_alphaIncr_corrected[2])
       }
 
-      ### TESTING STRATEGY 9 ###
-      # Only test OS at final analysis at full level
-      decisions[i, 9, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
+      ### TESTING STRATEGY 10 (EX/GS/FIRST) ###
+      # Test of PFS at interim analysis (level  0.005)
+      # Group-sequential test of OS:
+      #   Increase alpha to be spent at interim and final analysis by 0.005 if PFS rejected
+      # Exploit dependence at interim and final analysis as long as no hypothesis is rejected
+      temp_factor_interim <- inflation_factor(
+        current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
+        available_level = alpha * bretz_weight_pfs + os_alphaIncr_corrected[1],
+        covariance_matrix = var_ests[
+          i,
+          c("PFS_a1", "OS_a1"),
+          c("PFS_a1", "OS_a1")
+        ]
+      )
+      if (
+        p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs * temp_factor_interim
+      ) {
+        decisions[i, 10, "PFS_a1"] <- 1
+        decisions[i, 10, "OS_a1"] <- (p_values[i, "OS_a1"] <=
+          os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)
+        temp_factor <- inflation_factor(
+          current_levels = alpha -
+            (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs),
+          previous_levels = os_stageLevels_corrected[1] +
+            alpha * bretz_weight_pfs,
+          available_level = alpha,
+          covariance_matrix = var_ests[
+            i,
+            c("OS_a1", "OS_a2"),
+            c("OS_a1", "OS_a2")
+          ]
+        )
+        decisions[i, 10, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          temp_factor *
+            (alpha - (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)))
+      } else if (
+        p_values[i, "OS_a1"] <= os_alphaIncr_corrected[1] * temp_factor_interim
+      ) {
+        decisions[i, 10, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
+      } else {
+        temp_factor <- inflation_factor(
+          current_levels = os_alphaIncr_corrected[2],
+          previous_levels = temp_factor_interim *
+            c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
+          available_level = alpha,
+          covariance_matrix = var_ests[
+            i,
+            c("PFS_a1", "OS_a1", "OS_a2"),
+            c("PFS_a1", "OS_a1", "OS_a2")
+          ]
+        )
+        decisions[i, 10, "OS_a2"] <- (p_values[i, "OS_a2"] <=
+          temp_factor * os_alphaIncr_corrected[2])
+      }
 
-      decisions_frailty[i, 9, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+      temp_factor_interim <- inflation_factor(
+        current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
+        available_level = alpha * bretz_weight_pfs + os_alphaIncr_corrected[1],
+        covariance_matrix = var_ests_frailty[
+          i,
+          c("PFS_a1", "OS_a1"),
+          c("PFS_a1", "OS_a1")
+        ]
+      )
+      if (
+        p_values_frailty[i, "PFS_a1"] <=
+          alpha * bretz_weight_pfs * temp_factor_interim
+      ) {
+        decisions_frailty[i, 10, "PFS_a1"] <- 1
+        decisions_frailty[i, 10, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
+          os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)
+        temp_factor <- inflation_factor(
+          current_levels = alpha -
+            (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs),
+          previous_levels = os_stageLevels_corrected[1] +
+            alpha * bretz_weight_pfs,
+          available_level = alpha,
+          covariance_matrix = var_ests_frailty[
+            i,
+            c("OS_a1", "OS_a2"),
+            c("OS_a1", "OS_a2")
+          ]
+        )
+        decisions_frailty[i, 10, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          temp_factor *
+            (alpha - (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)))
+      } else if (
+        p_values_frailty[i, "OS_a1"] <=
+          os_alphaIncr_corrected[1] * temp_factor_interim
+      ) {
+        decisions_frailty[i, 10, "PFS_a1"] <- (p_values_frailty[i, "PFS_a1"] <=
+          alpha)
+      } else {
+        temp_factor <- inflation_factor(
+          current_levels = os_alphaIncr_corrected[2],
+          previous_levels = temp_factor_interim *
+            c(alpha * bretz_weight_pfs, os_alphaIncr_corrected[1]),
+          available_level = alpha,
+          covariance_matrix = var_ests_frailty[
+            i,
+            c("PFS_a1", "OS_a1", "OS_a2"),
+            c("PFS_a1", "OS_a1", "OS_a2")
+          ]
+        )
+        decisions_frailty[i, 10, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
+          temp_factor * os_alphaIncr_corrected[2])
+      }
+
+      ### TESTING STRATEGY 11 (OS) ###
+      # Only test OS at final analysis at full level
+      decisions[i, 11, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
+
+      decisions_frailty[i, 11, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
         alpha)
     }
 
