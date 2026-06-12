@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Moritz Fabian Danzer">
-<meta name="dcterms.date" content="2026-06-10">
+<meta name="dcterms.date" content="2026-06-12">
 
 <title>Efficient testing procedures for multiple time-to-event endpoints in group-sequential clinical trials</title>
 <style>
@@ -2343,15 +2343,19 @@ window.Quarto = {
   <li><a href="#trial-design" id="toc-trial-design" class="nav-link" data-scroll-target="#trial-design"><span class="header-section-number">2</span> Trial design</a>
   <ul class="collapse">
   <li><a href="#analysis-dates" id="toc-analysis-dates" class="nav-link" data-scroll-target="#analysis-dates"><span class="header-section-number">2.1</span> Analysis dates</a></li>
-  <li><a href="#simulated-pfs--and-os-data" id="toc-simulated-pfs--and-os-data" class="nav-link" data-scroll-target="#simulated-pfs--and-os-data"><span class="header-section-number">2.2</span> Simulated PFS- and OS-data</a></li>
+  <li><a href="#individual-patient-data-for-pfs-and-os" id="toc-individual-patient-data-for-pfs-and-os" class="nav-link" data-scroll-target="#individual-patient-data-for-pfs-and-os"><span class="header-section-number">2.2</span> Individual patient data for PFS and OS</a></li>
+  <li><a href="#recruitment-and-censoring-mechanism" id="toc-recruitment-and-censoring-mechanism" class="nav-link" data-scroll-target="#recruitment-and-censoring-mechanism"><span class="header-section-number">2.3</span> Recruitment and censoring mechanism</a></li>
+  <li><a href="#simulated-data" id="toc-simulated-data" class="nav-link" data-scroll-target="#simulated-data"><span class="header-section-number">2.4</span> Simulated data</a></li>
   </ul></li>
   <li><a href="#interim-analysis" id="toc-interim-analysis" class="nav-link" data-scroll-target="#interim-analysis"><span class="header-section-number">3</span> Interim analysis</a>
   <ul class="collapse">
-  <li><a href="#estimated-correlation-matrix" id="toc-estimated-correlation-matrix" class="nav-link" data-scroll-target="#estimated-correlation-matrix"><span class="header-section-number">3.1</span> Estimated correlation matrix</a></li>
+  <li><a href="#application-of-administrative-censoring" id="toc-application-of-administrative-censoring" class="nav-link" data-scroll-target="#application-of-administrative-censoring"><span class="header-section-number">3.1</span> Application of administrative censoring</a></li>
+  <li><a href="#computation-of-test-statistics-and-estimated-correlation-matrix" id="toc-computation-of-test-statistics-and-estimated-correlation-matrix" class="nav-link" data-scroll-target="#computation-of-test-statistics-and-estimated-correlation-matrix"><span class="header-section-number">3.2</span> Computation of test statistics and estimated correlation matrix</a></li>
+  <li><a href="#determination-of-decisions-at-interim-analysis" id="toc-determination-of-decisions-at-interim-analysis" class="nav-link" data-scroll-target="#determination-of-decisions-at-interim-analysis"><span class="header-section-number">3.3</span> Determination of decisions at interim analysis</a></li>
   </ul></li>
   <li><a href="#final-analysis" id="toc-final-analysis" class="nav-link" data-scroll-target="#final-analysis"><span class="header-section-number">4</span> Final analysis</a>
   <ul class="collapse">
-  <li><a href="#estimated-correlation-matrix-1" id="toc-estimated-correlation-matrix-1" class="nav-link" data-scroll-target="#estimated-correlation-matrix-1"><span class="header-section-number">4.1</span> Estimated correlation matrix</a></li>
+  <li><a href="#estimated-correlation-matrix" id="toc-estimated-correlation-matrix" class="nav-link" data-scroll-target="#estimated-correlation-matrix"><span class="header-section-number">4.1</span> Estimated correlation matrix</a></li>
   </ul></li>
   <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary"><span class="header-section-number">5</span> Summary</a></li>
   <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">6</span> References</a></li>
@@ -2380,7 +2384,7 @@ window.Quarto = {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">June 10, 2026</p>
+      <p class="date">June 12, 2026</p>
     </div>
   </div>
   
@@ -2395,9 +2399,10 @@ window.Quarto = {
 <p>With this Markdown file, we provide a practical comparison of the multiple testing procedure introduced in <span class="citation" data-cites="Danzer:2025">Danzer et al. (<a href="#ref-Danzer:2025" role="doc-biblioref">2025</a>)</span> with already existing testing procedures. These procedures target settings with multiple primary time-to-event endpoints in a group-sequential clinical trial. While the method itself is generally applicable, we restrict ourselves to a setting with the two time-to-event endpoints progression-free survival (PFS) and overall survival (OS) and a trial design with one interim and one final analysis. The analysis cutoff dates are event-driven. As outlined in <span class="citation" data-cites="Danzer:2025">Danzer et al. (<a href="#ref-Danzer:2025" role="doc-biblioref">2025</a>)</span>, both endpoints can be used to define these event-driven cutoffs.</p>
 <p>We require the following R packages:</p>
 <ul>
-<li><code>simIDM</code> for simulating individual patient data (IPD) for the trial design considered here.</li>
-<li><code>rpact</code> for calculating the critical values for the group-sequential testing procedures.</li>
-<li><code>mvtnorm</code> for calculating multivariate normal probabilities.</li>
+<li><code>simIDM</code> for simulating individual patient data (IPD) for the trial design considered here,</li>
+<li><code>rpact</code> for calculating the critical values for the group-sequential testing procedures,</li>
+<li><code>mvtnorm</code> for calculating multivariate normal probabilities,</li>
+<li><code>tidyverse</code> for data manipulation.</li>
 </ul>
 <p>The computation of test statistics, estimation of correlations between those test statistics and the calculation of inflation factors for the local significance levels is done by functions defined in the R script <code>stat_and_var_calc.R</code>.</p>
 <div class="cell">
@@ -2407,9 +2412,10 @@ window.Quarto = {
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(simIDM)</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rpact)</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mvtnorm)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Source R scripts with functions for the analyses</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;../R/stat_and_var_calc.R&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Source R scripts with functions for the analyses</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;../R/stat_and_var_calc.R&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <section id="introduction" class="level1" data-number="1">
@@ -2429,27 +2435,270 @@ window.Quarto = {
 <li><strong>EX/GS/FIRST</strong>: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/FIRST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.</li>
 <li><strong>OS</strong>: Testing procedure with a test of the OS hypothesis at level <span class="math inline">\(\alpha\)</span> at the final analysis without any interim analysis.</li>
 </ol>
+<p>Building on the very simple procedures BON and BON/GS, the procedures with the prefix “REC” allow for a reallocation of the significance level if the global null hypothesis has been rejected. The procedures with the prefix “EX” exploit the correlation of test statistics for PFS and OS. The resulting inflation of local significance level yields a uniform improvement of the testing procedures that takes effect as long as the global null hypothesis has not been rejected.</p>
 </section>
 <section id="trial-design" class="level1" data-number="2">
 <h1 data-number="2"><span class="header-section-number">2</span> Trial design</h1>
+<p>The parameters of the Bonferroni correction on which all other procedures are based is given in the following code chunk.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>bretz_weight_pfs <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">5</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>bretz_weight_os <span class="ot">&lt;-</span> <span class="dv">4</span> <span class="sc">/</span> <span class="dv">5</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fl">0.025</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
 <section id="analysis-dates" class="level2" data-number="2.1">
 <h2 data-number="2.1" class="anchored" data-anchor-id="analysis-dates"><span class="header-section-number">2.1</span> Analysis dates</h2>
+<p>As mentioned above, we consider one interim and a final analysis. The cutoff date for the interim analysis is driven by the number of observed PFS events. The cutoff date for the final analysis is driven by the number of observed OS events. The number of events required for the interim and final analysis are given in the following code chunk.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>nEventPFS <span class="ot">&lt;-</span> <span class="dv">433</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>nEventOS <span class="ot">&lt;-</span> <span class="dv">630</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
 </section>
-<section id="simulated-pfs--and-os-data" class="level2" data-number="2.2">
-<h2 data-number="2.2" class="anchored" data-anchor-id="simulated-pfs--and-os-data"><span class="header-section-number">2.2</span> Simulated PFS- and OS-data</h2>
-<p>We simulate data with the <code>simIDM</code> package. We use the first scenario of <span class="citation" data-cites="Erdmann:2025">Erdmann, Beyersmann, and Rufibach (<a href="#ref-Erdmann:2025" role="doc-biblioref">2025</a>)</span> here.</p>
+<section id="individual-patient-data-for-pfs-and-os" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="individual-patient-data-for-pfs-and-os"><span class="header-section-number">2.2</span> Individual patient data for PFS and OS</h2>
+<p>Individual patient data for PFS and OS are simulated based on a time-homogeneous Markovian multi-state model as described e.g. in <span class="citation" data-cites="Meller:2019">Meller, Beyersmann, and Rufibach (<a href="#ref-Meller:2019" role="doc-biblioref">2019</a>)</span>. We simulate data with the <code>simIDM</code> package. We use the first scenario of <span class="citation" data-cites="Erdmann:2025">Erdmann, Beyersmann, and Rufibach (<a href="#ref-Erdmann:2025" role="doc-biblioref">2025</a>)</span> here. The parameters for both treatment groups (i.e. the intensities for the transitions between the states of stable disease (0), progressive disease (1) and death (2)) are given in the follwoing code chunk.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>transitionTrt <span class="ot">&lt;-</span> <span class="fu">exponential_transition</span>(<span class="at">h01 =</span> <span class="fl">0.06</span>, <span class="at">h02 =</span> <span class="fl">0.3</span>, <span class="at">h12 =</span> <span class="fl">0.3</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>transitionPl <span class="ot">&lt;-</span> <span class="fu">exponential_transition</span>(<span class="at">h01 =</span> <span class="fl">0.1</span>, <span class="at">h02 =</span> <span class="fl">0.4</span>, <span class="at">h12 =</span> <span class="fl">0.3</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>transitionList <span class="ot">&lt;-</span> <span class="fu">list</span>(transitionPl, transitionTrt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="recruitment-and-censoring-mechanism" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="recruitment-and-censoring-mechanism"><span class="header-section-number">2.3</span> Recruitment and censoring mechanism</h2>
+<p>Patients are recruited over a time period of 32 months with a constant recruitment rate of 50 patients per month. As we assume a 1:1 randomisation ratio, this corresponds to a total sample size of 1600 patients with 800 patients in each treatment group. Besides administrative censoring at the end of the trial, we assume that there is additional loss to follow-up with a rate of 10% in 12 months.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Recruitment</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>recr_rate_per_arm <span class="ot">&lt;-</span> <span class="dv">25</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>recr_duration <span class="ot">&lt;-</span> <span class="dv">32</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>max_n_per_arm <span class="ot">&lt;-</span> <span class="dv">32</span> <span class="sc">*</span> <span class="dv">25</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Loss to follow-up</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>drprate <span class="ot">&lt;-</span> <span class="fl">0.1</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>drptime <span class="ot">&lt;-</span> <span class="dv">12</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="simulated-data" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="simulated-data"><span class="header-section-number">2.4</span> Simulated data</h2>
+<p>All of the parameters described above are used to simulate individual patient data for PFS and OS for the trial design considered here. The simulated data are stored in the <code>Sim</code> object. The function <code>getDatasetWideFormat()</code> is used to transform the simulated data into a format that is suitable for the analyses of the testing procedures.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1262025</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>Sim <span class="ot">&lt;-</span> <span class="fu">getDatasetWideFormat</span>(<span class="fu">getOneClinicalTrial</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">nPat =</span> <span class="fu">rep</span>(max_n_per_arm, <span class="dv">2</span>),</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">transitionByArm =</span> transitionList,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">dropout =</span> <span class="fu">list</span>(<span class="at">rate =</span> drprate, <span class="at">time =</span> drptime),</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="at">accrual =</span> <span class="fu">list</span>(<span class="at">param =</span> <span class="st">&quot;intensity&quot;</span>, <span class="at">value =</span> recr_rate_per_arm)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>      ))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
 </section>
 </section>
 <section id="interim-analysis" class="level1" data-number="3">
 <h1 data-number="3"><span class="header-section-number">3</span> Interim analysis</h1>
-<section id="estimated-correlation-matrix" class="level2" data-number="3.1">
-<h2 data-number="3.1" class="anchored" data-anchor-id="estimated-correlation-matrix"><span class="header-section-number">3.1</span> Estimated correlation matrix</h2>
+<section id="application-of-administrative-censoring" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="application-of-administrative-censoring"><span class="header-section-number">3.1</span> Application of administrative censoring</h2>
+<p>To obtain the data to be analysed at the interim analysis, we apply administrative censoring to the simulated data. The first few rows of the resulting dataset are shown in the following code chunk.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>studyCensored1 <span class="ot">&lt;-</span> <span class="fu">censoringByNumberEvents</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> Sim,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">eventNum =</span> nEventPFS,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">typeEvent =</span> <span class="st">&quot;PFS&quot;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>studyCensored1 <span class="ot">&lt;-</span> studyCensored1 <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">group =</span> trt <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(<span class="st">&quot;CensoredOS&quot;</span>, <span class="st">&quot;trt&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(group, <span class="at">.after =</span> <span class="st">&quot;id&quot;</span>)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">head</span>(studyCensored1))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 3%">
+<col style="width: 7%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 11%">
+<col style="width: 10%">
+<col style="width: 15%">
+<col style="width: 12%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">id</th>
+<th style="text-align: right;">group</th>
+<th style="text-align: right;">PFStime</th>
+<th style="text-align: right;">PFSevent</th>
+<th style="text-align: right;">OStime</th>
+<th style="text-align: right;">OSevent</th>
+<th style="text-align: right;">recruitTime</th>
+<th style="text-align: right;">OStimeCal</th>
+<th style="text-align: right;">PFStimeCal</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.432355</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.432355</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">8.5783974</td>
+<td style="text-align: right;">11.010753</td>
+<td style="text-align: right;">11.010753</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.597615</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4.597615</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1.1231423</td>
+<td style="text-align: right;">5.720758</td>
+<td style="text-align: right;">5.720758</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">3.191578</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3.191578</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">6.9163879</td>
+<td style="text-align: right;">10.107966</td>
+<td style="text-align: right;">10.107966</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">14</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.419994</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.419994</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.7239793</td>
+<td style="text-align: right;">3.143973</td>
+<td style="text-align: right;">3.143973</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">16</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.338818</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2.338818</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">3.5217965</td>
+<td style="text-align: right;">5.860614</td>
+<td style="text-align: right;">5.860614</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.420080</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1.420080</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">9.6614557</td>
+<td style="text-align: right;">11.081536</td>
+<td style="text-align: right;">11.081536</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="computation-of-test-statistics-and-estimated-correlation-matrix" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="computation-of-test-statistics-and-estimated-correlation-matrix"><span class="header-section-number">3.2</span> Computation of test statistics and estimated correlation matrix</h2>
+<p>We use our own function <code>test_stat_calc_single()</code> to compute the test statistics for the PFS and OS hypotheses at the interim analysis. The function also estimates the correlation between these test statistics.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>interim_stats <span class="ot">&lt;-</span> <span class="fu">test_stat_calc_single</span>(studyCensored1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The vector of interim test statistics <span class="math inline">\((U_{\text{PFS}}(A_{\text{PFS}}), U_{\text{OS}}(A_{\text{PFS}}))\)</span>, according to the notation of <span class="citation" data-cites="Danzer:2025">Danzer et al. (<a href="#ref-Danzer:2025" role="doc-biblioref">2025</a>)</span>, is given by <span class="math display">\[
+\begin{pmatrix}
+  -1.4617125 \\
+  -0.9707762
+\end{pmatrix}
+\]</span></p>
+<p>The estimated covariance matrix is given by <span class="math display">\[
+\begin{pmatrix}
+  0.1844692 &amp; 0.1353598 \\
+  0.1353598 &amp; 0.1720803
+\end{pmatrix}
+\]</span></p>
+</section>
+<section id="determination-of-decisions-at-interim-analysis" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="determination-of-decisions-at-interim-analysis"><span class="header-section-number">3.3</span> Determination of decisions at interim analysis</h2>
+<p>For the 11 testing procedures mentioned above, we now want to outline how to determine the decisions at the interim analysis. We first look at the decisions driven by <span class="math inline">\(U_{\text{PFS}}(A_{\text{PFS}})\)</span> for the seven procedures that do not exploit the correlation of the test statistics by design.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Procedure</th>
+<th style="text-align: right;">After Bonferroni-correction</th>
+<th style="text-align: right;">After possible propagation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>BON</td>
+<td style="text-align: right;">0.025</td>
+<td style="text-align: right;">12</td>
+</tr>
+<tr class="even">
+<td>EX/LAST</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">123</td>
+</tr>
+<tr class="odd">
+<td>EX/FIRST</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="even">
+<td>BON/GS</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">12</td>
+</tr>
+<tr class="odd">
+<td>EX/GS/LAST</td>
+<td style="text-align: right;">123</td>
+<td style="text-align: right;">123</td>
+</tr>
+<tr class="even">
+<td>EX/GS/FIRST</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+</tr>
+<tr class="odd">
+<td>OS</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">12</td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 <section id="final-analysis" class="level1" data-number="4">
 <h1 data-number="4"><span class="header-section-number">4</span> Final analysis</h1>
-<section id="estimated-correlation-matrix-1" class="level2" data-number="4.1">
-<h2 data-number="4.1" class="anchored" data-anchor-id="estimated-correlation-matrix-1"><span class="header-section-number">4.1</span> Estimated correlation matrix</h2>
+<section id="estimated-correlation-matrix" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="estimated-correlation-matrix"><span class="header-section-number">4.1</span> Estimated correlation matrix</h2>
 </section>
 </section>
 <section id="summary" class="level1" data-number="5">
@@ -2466,6 +2715,9 @@ Erdmann, Alexandra, Jan Beyersmann, and Kaspar Rufibach. 2025. <span>“Oncology
 </div>
 <div id="ref-Lan:83" class="csl-entry" role="listitem">
 Lan, K. K. Gordon, and David L. DeMets. 1983. <span>“Discrete Sequential Boundaries for Clinical Trials.”</span> <em>Biometrika</em> 70 (3): 659–63.
+</div>
+<div id="ref-Meller:2019" class="csl-entry" role="listitem">
+Meller, Matthias, Jan Beyersmann, and Kaspar Rufibach. 2019. <span>“Joint Modeling of Progression-Free and Overall Survival and Computation of Correlation Measures.”</span> <em>Statistics in Medicine</em> 38 (22): 4270–89.
 </div>
 </div>
 <!-- -->
@@ -2924,93 +3176,207 @@ Lan, K. K. Gordon, and David L. DeMets. 1983. <span>“Discrete Sequential Bound
     }
   });
   </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class>
-<div class="sourceCode" id="cb2" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> &quot;Efficient testing procedures for multiple time-to-event endpoints in group-sequential clinical trials&quot;</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> &quot;A practical comparison based on simulated data&quot;</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> &quot;Moritz Fabian Danzer&quot;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> &quot;last-modified&quot;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="an">bibliography:</span><span class="co"> multsurvtrialdesign_bib.bib</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-depth: 3</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="co">    number-sections: true</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: cosmo</span></span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="co">    self-contained: true</span></span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span></span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="co">  echo: true</span></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="co">  message: false</span></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="co">  error: false</span></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co">  freeze: auto</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a><span class="an">knitr:</span></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="co">  opts_chunk:</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="co">    fig.path: &quot;vignettes/figures/&quot;</span></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>With this Markdown file, we provide a practical comparison of the multiple testing procedure introduced in @Danzer:2025 with already existing testing procedures. These procedures target settings with multiple primary time-to-event endpoints in a group-sequential clinical trial. While the method itself is generally applicable, we restrict ourselves to a setting with the two time-to-event endpoints progression-free survival (PFS) and overall survival (OS) and a trial design with one interim and one final analysis. The analysis cutoff dates are event-driven. As outlined in @Danzer:2025, both endpoints can be used to define these event-driven cutoffs. </span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>We require the following R packages:</span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="in">`simIDM`</span> for simulating individual patient data (IPD) for the trial design considered here.</span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="in">`rpact`</span> for calculating the critical values for the group-sequential testing procedures.</span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="in">`mvtnorm`</span> for calculating multivariate normal probabilities.</span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>The computation of test statistics, estimation of correlations between those test statistics and the calculation of inflation factors for the local significance levels is done by functions defined in the R script <span class="in">`stat_and_var_calc.R`</span>.</span>
-<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
-<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: setup</span></span>
-<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Load R packages</span></span>
-<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(simIDM)</span>
-<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rpact)</span>
-<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mvtnorm)</span>
-<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a><span class="co"># Source R scripts with functions for the analyses</span></span>
-<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;../R/stat_and_var_calc.R&quot;</span>)</span>
-<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
-<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a><span class="fu"># Introduction</span></span>
-<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>As in the manuscript, we consider eight (?) different testing procedure. These can be described as follows:</span>
-<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**BON**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis.</span>
-<span id="cb2-57"><a href="#cb2-57" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**REC/LAST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/LAST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the alpha level for the OS hypothesis at the final analysis is increased to $\alpha$.</span>
-<span id="cb2-58"><a href="#cb2-58" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**REC/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/FIRST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the OS hypothesis is tested at level $\rho_{\text{PFS}} \alpha$ at the interim analysis. If unsuccessful, the remaining level $\rho_{\text{OS}} \alpha$ is spent at the final analysis as in a $\alpha$-spending approach.</span>
-<span id="cb2-59"><a href="#cb2-59" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>**EX/LAST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/LAST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.</span>
-<span id="cb2-60"><a href="#cb2-60" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>**EX/FIRST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/FIRST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.</span>
-<span id="cb2-61"><a href="#cb2-61" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>**BON/GS**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{PFS}} \alpha$ according to an $\alpha$-spending approach based one the O&#39;Brien-Fleming spending function of Lan and DeMets <span class="co">[</span><span class="ot">see @Lan:83</span><span class="co">]</span>.  </span>
-<span id="cb2-62"><a href="#cb2-62" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>**REC/GS/LAST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{OS}} \alpha$ according to an $\alpha$-spending approach based one the O&#39;Brien-Fleming spending function of Lan and DeMets [see @Lan:83]. As in the REC/LAST procedure, a rejection of the PFS hypothesis at the interim analysis allows to spend an additional alpha level of $\rho_{\text{PFS}} \alpha$ for the OS hypothesis at the final analysis.</span>
-<span id="cb2-63"><a href="#cb2-63" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>**REC/GS/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{OS}} \alpha$ according to an $\alpha$-spending approach based one the O&#39;Brien-Fleming spending function of Lan and DeMets [see @Lan:83]. As in the REC/FIRST procedure, a rejection of the PFS hypothesis at the interim analysis allows to spend an additional alpha level of $\rho_{\text{PFS}} \alpha$ for the OS hypothesis at the interim analysis.</span>
-<span id="cb2-64"><a href="#cb2-64" aria-hidden="true" tabindex="-1"></a><span class="ss">9. </span>**EX/GS/LAST**: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/LAST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.</span>
-<span id="cb2-65"><a href="#cb2-65" aria-hidden="true" tabindex="-1"></a><span class="ss">10. </span>**EX/GS/FIRST**: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/FIRST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.</span>
-<span id="cb2-66"><a href="#cb2-66" aria-hidden="true" tabindex="-1"></a><span class="ss">11. </span>**OS**: Testing procedure with a test of the OS hypothesis at level $\alpha$ at the final analysis without any interim analysis.</span>
-<span id="cb2-67"><a href="#cb2-67" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-68"><a href="#cb2-68" aria-hidden="true" tabindex="-1"></a><span class="fu"># Trial design</span></span>
-<span id="cb2-69"><a href="#cb2-69" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-70"><a href="#cb2-70" aria-hidden="true" tabindex="-1"></a><span class="fu">## Analysis dates</span></span>
-<span id="cb2-71"><a href="#cb2-71" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-72"><a href="#cb2-72" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulated PFS- and OS-data</span></span>
-<span id="cb2-73"><a href="#cb2-73" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-74"><a href="#cb2-74" aria-hidden="true" tabindex="-1"></a>We simulate data with the <span class="in">`simIDM`</span> package. We use the first scenario of @Erdmann:2025 here.</span>
-<span id="cb2-75"><a href="#cb2-75" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-76"><a href="#cb2-76" aria-hidden="true" tabindex="-1"></a><span class="fu"># Interim analysis</span></span>
-<span id="cb2-77"><a href="#cb2-77" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-78"><a href="#cb2-78" aria-hidden="true" tabindex="-1"></a><span class="fu">## Estimated correlation matrix</span></span>
-<span id="cb2-79"><a href="#cb2-79" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-80"><a href="#cb2-80" aria-hidden="true" tabindex="-1"></a><span class="fu"># Final analysis</span></span>
-<span id="cb2-81"><a href="#cb2-81" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-82"><a href="#cb2-82" aria-hidden="true" tabindex="-1"></a><span class="fu">## Estimated correlation matrix</span></span>
-<span id="cb2-83"><a href="#cb2-83" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-84"><a href="#cb2-84" aria-hidden="true" tabindex="-1"></a><span class="fu"># Summary</span></span>
-<span id="cb2-85"><a href="#cb2-85" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-86"><a href="#cb2-86" aria-hidden="true" tabindex="-1"></a><span class="fu"># References</span></span>
-<span id="cb2-87"><a href="#cb2-87" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-88"><a href="#cb2-88" aria-hidden="true" tabindex="-1"></a>::: {#refs}</span>
-<span id="cb2-89"><a href="#cb2-89" aria-hidden="true" tabindex="-1"></a>:::</span>
+<div class="sourceCode" id="cb9" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> &quot;Efficient testing procedures for multiple time-to-event endpoints in group-sequential clinical trials&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> &quot;A practical comparison based on simulated data&quot;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> &quot;Moritz Fabian Danzer&quot;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> &quot;last-modified&quot;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="an">bibliography:</span><span class="co"> multsurvtrialdesign_bib.bib</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-depth: 3</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co">    number-sections: true</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: cosmo</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co">    self-contained: true</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co">  echo: true</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="co">  message: false</span></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="co">  error: false</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co">  freeze: auto</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a><span class="an">knitr:</span></span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a><span class="co">  opts_chunk:</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a><span class="co">    fig.path: &quot;vignettes/figures/&quot;</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>With this Markdown file, we provide a practical comparison of the multiple testing procedure introduced in @Danzer:2025 with already existing testing procedures. These procedures target settings with multiple primary time-to-event endpoints in a group-sequential clinical trial. While the method itself is generally applicable, we restrict ourselves to a setting with the two time-to-event endpoints progression-free survival (PFS) and overall survival (OS) and a trial design with one interim and one final analysis. The analysis cutoff dates are event-driven. As outlined in @Danzer:2025, both endpoints can be used to define these event-driven cutoffs. </span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>We require the following R packages:</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="in">`simIDM`</span> for simulating individual patient data (IPD) for the trial design considered here,</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="in">`rpact`</span> for calculating the critical values for the group-sequential testing procedures,</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="in">`mvtnorm`</span> for calculating multivariate normal probabilities,</span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span><span class="in">`tidyverse`</span> for data manipulation.</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a>The computation of test statistics, estimation of correlations between those test statistics and the calculation of inflation factors for the local significance levels is done by functions defined in the R script <span class="in">`stat_and_var_calc.R`</span>.</span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: setup</span></span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a><span class="co"># Load R packages</span></span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(simIDM)</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rpact)</span>
+<span id="cb9-45"><a href="#cb9-45" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(mvtnorm)</span>
+<span id="cb9-46"><a href="#cb9-46" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb9-47"><a href="#cb9-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-48"><a href="#cb9-48" aria-hidden="true" tabindex="-1"></a><span class="co"># Source R scripts with functions for the analyses</span></span>
+<span id="cb9-49"><a href="#cb9-49" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">&quot;../R/stat_and_var_calc.R&quot;</span>)</span>
+<span id="cb9-50"><a href="#cb9-50" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-51"><a href="#cb9-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-52"><a href="#cb9-52" aria-hidden="true" tabindex="-1"></a><span class="fu"># Introduction</span></span>
+<span id="cb9-53"><a href="#cb9-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-54"><a href="#cb9-54" aria-hidden="true" tabindex="-1"></a>As in the manuscript, we consider eight (?) different testing procedure. These can be described as follows:</span>
+<span id="cb9-55"><a href="#cb9-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-56"><a href="#cb9-56" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>**BON**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis.</span>
+<span id="cb9-57"><a href="#cb9-57" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>**REC/LAST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/LAST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the alpha level for the OS hypothesis at the final analysis is increased to $\alpha$.</span>
+<span id="cb9-58"><a href="#cb9-58" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>**REC/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/FIRST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the OS hypothesis is tested at level $\rho_{\text{PFS}} \alpha$ at the interim analysis. If unsuccessful, the remaining level $\rho_{\text{OS}} \alpha$ is spent at the final analysis as in a $\alpha$-spending approach.</span>
+<span id="cb9-59"><a href="#cb9-59" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>**EX/LAST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/LAST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.</span>
+<span id="cb9-60"><a href="#cb9-60" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>**EX/FIRST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/FIRST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.</span>
+<span id="cb9-61"><a href="#cb9-61" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>**BON/GS**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{PFS}} \alpha$ according to an $\alpha$-spending approach based one the O&#39;Brien-Fleming spending function of Lan and DeMets <span class="co">[</span><span class="ot">see @Lan:83</span><span class="co">]</span>.  </span>
+<span id="cb9-62"><a href="#cb9-62" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>**REC/GS/LAST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{OS}} \alpha$ according to an $\alpha$-spending approach based one the O&#39;Brien-Fleming spending function of Lan and DeMets [see @Lan:83]. As in the REC/LAST procedure, a rejection of the PFS hypothesis at the interim analysis allows to spend an additional alpha level of $\rho_{\text{PFS}} \alpha$ for the OS hypothesis at the final analysis.</span>
+<span id="cb9-63"><a href="#cb9-63" aria-hidden="true" tabindex="-1"></a><span class="ss">8. </span>**REC/GS/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{OS}} \alpha$ according to an $\alpha$-spending approach based one the O&#39;Brien-Fleming spending function of Lan and DeMets [see @Lan:83]. As in the REC/FIRST procedure, a rejection of the PFS hypothesis at the interim analysis allows to spend an additional alpha level of $\rho_{\text{PFS}} \alpha$ for the OS hypothesis at the interim analysis.</span>
+<span id="cb9-64"><a href="#cb9-64" aria-hidden="true" tabindex="-1"></a><span class="ss">9. </span>**EX/GS/LAST**: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/LAST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.</span>
+<span id="cb9-65"><a href="#cb9-65" aria-hidden="true" tabindex="-1"></a><span class="ss">10. </span>**EX/GS/FIRST**: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/FIRST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.</span>
+<span id="cb9-66"><a href="#cb9-66" aria-hidden="true" tabindex="-1"></a><span class="ss">11. </span>**OS**: Testing procedure with a test of the OS hypothesis at level $\alpha$ at the final analysis without any interim analysis.</span>
+<span id="cb9-67"><a href="#cb9-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-68"><a href="#cb9-68" aria-hidden="true" tabindex="-1"></a>Building on the very simple procedures BON and BON/GS, the procedures with the prefix &quot;REC&quot; allow for a reallocation of the significance level if the global null hypothesis has been rejected. The procedures with the prefix &quot;EX&quot; exploit the correlation of test statistics for PFS and OS. The resulting inflation of local significance level yields a uniform improvement of the testing procedures that takes effect as long as the global null hypothesis has not been rejected. </span>
+<span id="cb9-69"><a href="#cb9-69" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-70"><a href="#cb9-70" aria-hidden="true" tabindex="-1"></a><span class="fu"># Trial design</span></span>
+<span id="cb9-71"><a href="#cb9-71" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-72"><a href="#cb9-72" aria-hidden="true" tabindex="-1"></a>The parameters of the Bonferroni correction on which all other procedures are based is given in the following code chunk.</span>
+<span id="cb9-73"><a href="#cb9-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-76"><a href="#cb9-76" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-77"><a href="#cb9-77" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: bonferroni_parameters</span></span>
+<span id="cb9-78"><a href="#cb9-78" aria-hidden="true" tabindex="-1"></a>bretz_weight_pfs <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> <span class="dv">5</span></span>
+<span id="cb9-79"><a href="#cb9-79" aria-hidden="true" tabindex="-1"></a>bretz_weight_os <span class="ot">&lt;-</span> <span class="dv">4</span> <span class="sc">/</span> <span class="dv">5</span></span>
+<span id="cb9-80"><a href="#cb9-80" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fl">0.025</span></span>
+<span id="cb9-81"><a href="#cb9-81" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-82"><a href="#cb9-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-83"><a href="#cb9-83" aria-hidden="true" tabindex="-1"></a><span class="fu">## Analysis dates</span></span>
+<span id="cb9-84"><a href="#cb9-84" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-85"><a href="#cb9-85" aria-hidden="true" tabindex="-1"></a>As mentioned above, we consider one interim and a final analysis. The cutoff date for the interim analysis is driven by the number of observed PFS events. The cutoff date for the final analysis is driven by the number of observed OS events. The number of events required for the interim and final analysis are given in the following code chunk.</span>
+<span id="cb9-86"><a href="#cb9-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-89"><a href="#cb9-89" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-90"><a href="#cb9-90" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: analysis_dates</span></span>
+<span id="cb9-91"><a href="#cb9-91" aria-hidden="true" tabindex="-1"></a>nEventPFS <span class="ot">&lt;-</span> <span class="dv">433</span></span>
+<span id="cb9-92"><a href="#cb9-92" aria-hidden="true" tabindex="-1"></a>nEventOS <span class="ot">&lt;-</span> <span class="dv">630</span></span>
+<span id="cb9-93"><a href="#cb9-93" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-94"><a href="#cb9-94" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-95"><a href="#cb9-95" aria-hidden="true" tabindex="-1"></a><span class="fu">## Individual patient data for PFS and OS</span></span>
+<span id="cb9-96"><a href="#cb9-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-97"><a href="#cb9-97" aria-hidden="true" tabindex="-1"></a>Individual patient data for PFS and OS are simulated based on a time-homogeneous Markovian multi-state model as described e.g. in @Meller:2019. We simulate data with the <span class="in">`simIDM`</span> package. We use the first scenario of @Erdmann:2025 here. The parameters for both treatment groups (i.e. the intensities for the transitions between the states of stable disease (0), progressive disease (1) and death (2)) are given in the follwoing code chunk.</span>
+<span id="cb9-98"><a href="#cb9-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-101"><a href="#cb9-101" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-102"><a href="#cb9-102" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: idm_settings</span></span>
+<span id="cb9-103"><a href="#cb9-103" aria-hidden="true" tabindex="-1"></a>transitionTrt <span class="ot">&lt;-</span> <span class="fu">exponential_transition</span>(<span class="at">h01 =</span> <span class="fl">0.06</span>, <span class="at">h02 =</span> <span class="fl">0.3</span>, <span class="at">h12 =</span> <span class="fl">0.3</span>)</span>
+<span id="cb9-104"><a href="#cb9-104" aria-hidden="true" tabindex="-1"></a>transitionPl <span class="ot">&lt;-</span> <span class="fu">exponential_transition</span>(<span class="at">h01 =</span> <span class="fl">0.1</span>, <span class="at">h02 =</span> <span class="fl">0.4</span>, <span class="at">h12 =</span> <span class="fl">0.3</span>)</span>
+<span id="cb9-105"><a href="#cb9-105" aria-hidden="true" tabindex="-1"></a>transitionList <span class="ot">&lt;-</span> <span class="fu">list</span>(transitionPl, transitionTrt)</span>
+<span id="cb9-106"><a href="#cb9-106" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-107"><a href="#cb9-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-108"><a href="#cb9-108" aria-hidden="true" tabindex="-1"></a><span class="fu">## Recruitment and censoring mechanism</span></span>
+<span id="cb9-109"><a href="#cb9-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-110"><a href="#cb9-110" aria-hidden="true" tabindex="-1"></a>Patients are recruited over a time period of 32 months with a constant recruitment rate of 50 patients per month. As we assume a 1:1 randomisation ratio, this corresponds to a total sample size of 1600 patients with 800 patients in each treatment group. Besides administrative censoring at the end of the trial, we assume that there is additional loss to follow-up with a rate of 10% in 12 months.</span>
+<span id="cb9-111"><a href="#cb9-111" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-114"><a href="#cb9-114" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-115"><a href="#cb9-115" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: recruitment_censoring</span></span>
+<span id="cb9-116"><a href="#cb9-116" aria-hidden="true" tabindex="-1"></a><span class="co"># Recruitment</span></span>
+<span id="cb9-117"><a href="#cb9-117" aria-hidden="true" tabindex="-1"></a>recr_rate_per_arm <span class="ot">&lt;-</span> <span class="dv">25</span></span>
+<span id="cb9-118"><a href="#cb9-118" aria-hidden="true" tabindex="-1"></a>recr_duration <span class="ot">&lt;-</span> <span class="dv">32</span></span>
+<span id="cb9-119"><a href="#cb9-119" aria-hidden="true" tabindex="-1"></a>max_n_per_arm <span class="ot">&lt;-</span> <span class="dv">32</span> <span class="sc">*</span> <span class="dv">25</span></span>
+<span id="cb9-120"><a href="#cb9-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-121"><a href="#cb9-121" aria-hidden="true" tabindex="-1"></a><span class="co"># Loss to follow-up</span></span>
+<span id="cb9-122"><a href="#cb9-122" aria-hidden="true" tabindex="-1"></a>drprate <span class="ot">&lt;-</span> <span class="fl">0.1</span></span>
+<span id="cb9-123"><a href="#cb9-123" aria-hidden="true" tabindex="-1"></a>drptime <span class="ot">&lt;-</span> <span class="dv">12</span></span>
+<span id="cb9-124"><a href="#cb9-124" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-125"><a href="#cb9-125" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-126"><a href="#cb9-126" aria-hidden="true" tabindex="-1"></a><span class="fu">## Simulated data</span></span>
+<span id="cb9-127"><a href="#cb9-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-128"><a href="#cb9-128" aria-hidden="true" tabindex="-1"></a>All of the parameters described above are used to simulate individual patient data for PFS and OS for the trial design considered here. The simulated data are stored in the <span class="in">`Sim`</span> object. The function <span class="in">`getDatasetWideFormat()`</span> is used to transform the simulated data into a format that is suitable for the analyses of the testing procedures.</span>
+<span id="cb9-129"><a href="#cb9-129" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-132"><a href="#cb9-132" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-133"><a href="#cb9-133" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: simulate_pfs_os</span></span>
+<span id="cb9-134"><a href="#cb9-134" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1262025</span>)</span>
+<span id="cb9-135"><a href="#cb9-135" aria-hidden="true" tabindex="-1"></a>Sim <span class="ot">&lt;-</span> <span class="fu">getDatasetWideFormat</span>(<span class="fu">getOneClinicalTrial</span>(</span>
+<span id="cb9-136"><a href="#cb9-136" aria-hidden="true" tabindex="-1"></a>        <span class="at">nPat =</span> <span class="fu">rep</span>(max_n_per_arm, <span class="dv">2</span>),</span>
+<span id="cb9-137"><a href="#cb9-137" aria-hidden="true" tabindex="-1"></a>        <span class="at">transitionByArm =</span> transitionList,</span>
+<span id="cb9-138"><a href="#cb9-138" aria-hidden="true" tabindex="-1"></a>        <span class="at">dropout =</span> <span class="fu">list</span>(<span class="at">rate =</span> drprate, <span class="at">time =</span> drptime),</span>
+<span id="cb9-139"><a href="#cb9-139" aria-hidden="true" tabindex="-1"></a>        <span class="at">accrual =</span> <span class="fu">list</span>(<span class="at">param =</span> <span class="st">&quot;intensity&quot;</span>, <span class="at">value =</span> recr_rate_per_arm)</span>
+<span id="cb9-140"><a href="#cb9-140" aria-hidden="true" tabindex="-1"></a>      ))</span>
+<span id="cb9-141"><a href="#cb9-141" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-142"><a href="#cb9-142" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-143"><a href="#cb9-143" aria-hidden="true" tabindex="-1"></a><span class="fu"># Interim analysis</span></span>
+<span id="cb9-144"><a href="#cb9-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-145"><a href="#cb9-145" aria-hidden="true" tabindex="-1"></a><span class="fu">## Application of administrative censoring </span></span>
+<span id="cb9-146"><a href="#cb9-146" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-147"><a href="#cb9-147" aria-hidden="true" tabindex="-1"></a>To obtain the data to be analysed at the interim analysis, we apply administrative censoring to the simulated data. The first few rows of the resulting dataset are shown in the following code chunk.</span>
+<span id="cb9-148"><a href="#cb9-148" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-151"><a href="#cb9-151" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-152"><a href="#cb9-152" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: admin_censoring_interim</span></span>
+<span id="cb9-153"><a href="#cb9-153" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-154"><a href="#cb9-154" aria-hidden="true" tabindex="-1"></a>studyCensored1 <span class="ot">&lt;-</span> <span class="fu">censoringByNumberEvents</span>(</span>
+<span id="cb9-155"><a href="#cb9-155" aria-hidden="true" tabindex="-1"></a>        <span class="at">data =</span> Sim,</span>
+<span id="cb9-156"><a href="#cb9-156" aria-hidden="true" tabindex="-1"></a>        <span class="at">eventNum =</span> nEventPFS,</span>
+<span id="cb9-157"><a href="#cb9-157" aria-hidden="true" tabindex="-1"></a>        <span class="at">typeEvent =</span> <span class="st">&quot;PFS&quot;</span></span>
+<span id="cb9-158"><a href="#cb9-158" aria-hidden="true" tabindex="-1"></a>      )</span>
+<span id="cb9-159"><a href="#cb9-159" aria-hidden="true" tabindex="-1"></a>studyCensored1 <span class="ot">&lt;-</span> studyCensored1 <span class="sc">|&gt;</span></span>
+<span id="cb9-160"><a href="#cb9-160" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">group =</span> trt <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-161"><a href="#cb9-161" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(<span class="st">&quot;CensoredOS&quot;</span>, <span class="st">&quot;trt&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb9-162"><a href="#cb9-162" aria-hidden="true" tabindex="-1"></a>  <span class="fu">relocate</span>(group, <span class="at">.after =</span> <span class="st">&quot;id&quot;</span>)</span>
+<span id="cb9-163"><a href="#cb9-163" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">head</span>(studyCensored1))</span>
+<span id="cb9-164"><a href="#cb9-164" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-165"><a href="#cb9-165" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-166"><a href="#cb9-166" aria-hidden="true" tabindex="-1"></a><span class="fu">## Computation of test statistics and estimated correlation matrix</span></span>
+<span id="cb9-167"><a href="#cb9-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-168"><a href="#cb9-168" aria-hidden="true" tabindex="-1"></a>We use our own function <span class="in">`test_stat_calc_single()`</span> to compute the test statistics for the PFS and OS hypotheses at the interim analysis. The function also estimates the correlation between these test statistics.</span>
+<span id="cb9-169"><a href="#cb9-169" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-172"><a href="#cb9-172" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb9-173"><a href="#cb9-173" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: test_stats_interim</span></span>
+<span id="cb9-174"><a href="#cb9-174" aria-hidden="true" tabindex="-1"></a>interim_stats <span class="ot">&lt;-</span> <span class="fu">test_stat_calc_single</span>(studyCensored1)</span>
+<span id="cb9-175"><a href="#cb9-175" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb9-176"><a href="#cb9-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-177"><a href="#cb9-177" aria-hidden="true" tabindex="-1"></a>The vector of interim test statistics $(U_{\text{PFS}}(A_{\text{PFS}}), U_{\text{OS}}(A_{\text{PFS}}))$, according to the notation of @Danzer:2025, is given by</span>
+<span id="cb9-178"><a href="#cb9-178" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb9-179"><a href="#cb9-179" aria-hidden="true" tabindex="-1"></a>\begin{pmatrix}</span>
+<span id="cb9-180"><a href="#cb9-180" aria-hidden="true" tabindex="-1"></a>  <span class="in">`{r} interim_stats[[1]][1]`</span> <span class="sc">\\</span></span>
+<span id="cb9-181"><a href="#cb9-181" aria-hidden="true" tabindex="-1"></a>  <span class="in">`{r} interim_stats[[1]][2]`</span></span>
+<span id="cb9-182"><a href="#cb9-182" aria-hidden="true" tabindex="-1"></a>\end{pmatrix}</span>
+<span id="cb9-183"><a href="#cb9-183" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb9-184"><a href="#cb9-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-185"><a href="#cb9-185" aria-hidden="true" tabindex="-1"></a>The estimated covariance matrix is given by</span>
+<span id="cb9-186"><a href="#cb9-186" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb9-187"><a href="#cb9-187" aria-hidden="true" tabindex="-1"></a>\begin{pmatrix}</span>
+<span id="cb9-188"><a href="#cb9-188" aria-hidden="true" tabindex="-1"></a>  <span class="in">`{r} interim_stats[[2]][1, 1]`</span> &amp; <span class="in">`{r} interim_stats[[2]][1, 2]`</span> <span class="sc">\\</span></span>
+<span id="cb9-189"><a href="#cb9-189" aria-hidden="true" tabindex="-1"></a>  <span class="in">`{r} interim_stats[[2]][2, 1]`</span> &amp; <span class="in">`{r} interim_stats[[2]][2, 2]`</span></span>
+<span id="cb9-190"><a href="#cb9-190" aria-hidden="true" tabindex="-1"></a>\end{pmatrix}</span>
+<span id="cb9-191"><a href="#cb9-191" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb9-192"><a href="#cb9-192" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-193"><a href="#cb9-193" aria-hidden="true" tabindex="-1"></a><span class="fu">## Determination of decisions at interim analysis</span></span>
+<span id="cb9-194"><a href="#cb9-194" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-195"><a href="#cb9-195" aria-hidden="true" tabindex="-1"></a>For the 11 testing procedures mentioned above, we now want to outline how to determine the decisions at the interim analysis. We first look at the decisions driven by $U_{\text{PFS}}(A_{\text{PFS}})$ for the seven procedures that do not exploit the correlation of the test statistics by design.</span>
+<span id="cb9-196"><a href="#cb9-196" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-197"><a href="#cb9-197" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Procedure <span class="pp">|</span> After Bonferroni-correction <span class="pp">|</span> After possible propagation <span class="pp">|</span></span>
+<span id="cb9-198"><a href="#cb9-198" aria-hidden="true" tabindex="-1"></a><span class="pp">|-------------|------:|------:|</span></span>
+<span id="cb9-199"><a href="#cb9-199" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BON         <span class="pp">|</span> <span class="in">`{r} alpha`</span>    <span class="pp">|</span>    12 <span class="pp">|</span> </span>
+<span id="cb9-200"><a href="#cb9-200" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> EX/LAST     <span class="pp">|</span> 123   <span class="pp">|</span>   123 <span class="pp">|</span></span>
+<span id="cb9-201"><a href="#cb9-201" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> EX/FIRST    <span class="pp">|</span> 1     <span class="pp">|</span>     1 <span class="pp">|</span></span>
+<span id="cb9-202"><a href="#cb9-202" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> BON/GS      <span class="pp">|</span> 12    <span class="pp">|</span>    12 <span class="pp">|</span></span>
+<span id="cb9-203"><a href="#cb9-203" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> EX/GS/LAST  <span class="pp">|</span> 123   <span class="pp">|</span>   123 <span class="pp">|</span></span>
+<span id="cb9-204"><a href="#cb9-204" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> EX/GS/FIRST <span class="pp">|</span> 1     <span class="pp">|</span>     1 <span class="pp">|</span></span>
+<span id="cb9-205"><a href="#cb9-205" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> OS          <span class="pp">|</span> 12    <span class="pp">|</span>    12 <span class="pp">|</span></span>
+<span id="cb9-206"><a href="#cb9-206" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-207"><a href="#cb9-207" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-208"><a href="#cb9-208" aria-hidden="true" tabindex="-1"></a><span class="fu"># Final analysis</span></span>
+<span id="cb9-209"><a href="#cb9-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-210"><a href="#cb9-210" aria-hidden="true" tabindex="-1"></a><span class="fu">## Estimated correlation matrix</span></span>
+<span id="cb9-211"><a href="#cb9-211" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-212"><a href="#cb9-212" aria-hidden="true" tabindex="-1"></a><span class="fu"># Summary</span></span>
+<span id="cb9-213"><a href="#cb9-213" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-214"><a href="#cb9-214" aria-hidden="true" tabindex="-1"></a><span class="fu"># References</span></span>
+<span id="cb9-215"><a href="#cb9-215" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-216"><a href="#cb9-216" aria-hidden="true" tabindex="-1"></a>::: {#refs}</span>
+<span id="cb9-217"><a href="#cb9-217" aria-hidden="true" tabindex="-1"></a>:::</span>
 </code><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal><i class="bi"></i></button></pre></div>
 </div></div></div></div></div>
 </div> <!-- /content -->

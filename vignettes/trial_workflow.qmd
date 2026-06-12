@@ -28,23 +28,23 @@ With this Markdown file, we provide a practical comparison of the multiple testi
 
 We require the following R packages:
 
-* `simIDM` for simulating individual patient data (IPD) for the trial design considered here.
-* `rpact` for calculating the critical values for the group-sequential testing procedures.
-* `mvtnorm` for calculating multivariate normal probabilities.
+* `simIDM` for simulating individual patient data (IPD) for the trial design considered here,
+* `rpact` for calculating the critical values for the group-sequential testing procedures,
+* `mvtnorm` for calculating multivariate normal probabilities,
+* `tidyverse` for data manipulation.
 
 The computation of test statistics, estimation of correlations between those test statistics and the calculation of inflation factors for the local significance levels is done by functions defined in the R script `stat_and_var_calc.R`.
 
 ```{r}
 #| label: setup
-
 # Load R packages
 library(simIDM)
 library(rpact)
 library(mvtnorm)
+library(tidyverse)
 
 # Source R scripts with functions for the analyses
 source("../R/stat_and_var_calc.R")
-
 ```
 
 # Introduction
@@ -63,17 +63,136 @@ As in the manuscript, we consider eight (?) different testing procedure. These c
 10. **EX/GS/FIRST**: Improved closed testing procedure with exhaustion of the FWER. Based on REC/GS/FIRST, we improve the procedure by inflating the local levels at the interim analysis by explotining the correlation of the test statistics for PFS and OS at the interim analysis. Additionally, if no hypothesis has been rejected at the interim analysis, we exploit the correlation of the OS test statistics at the final analysis with the two test statistics just mentioned.
 11. **OS**: Testing procedure with a test of the OS hypothesis at level $\alpha$ at the final analysis without any interim analysis.
 
+Building on the very simple procedures BON and BON/GS, the procedures with the prefix "REC" allow for a reallocation of the significance level if the global null hypothesis has been rejected. The procedures with the prefix "EX" exploit the correlation of test statistics for PFS and OS. The resulting inflation of local significance level yields a uniform improvement of the testing procedures that takes effect as long as the global null hypothesis has not been rejected. 
+
 # Trial design
+
+The parameters of the Bonferroni correction on which all other procedures are based is given in the following code chunk.
+
+```{r}
+#| label: bonferroni_parameters
+bretz_weight_pfs <- 1 / 5
+bretz_weight_os <- 4 / 5
+alpha <- 0.025
+```
 
 ## Analysis dates
 
-## Simulated PFS- and OS-data
+As mentioned above, we consider one interim and a final analysis. The cutoff date for the interim analysis is driven by the number of observed PFS events. The cutoff date for the final analysis is driven by the number of observed OS events. The number of events required for the interim and final analysis are given in the following code chunk.
 
-We simulate data with the `simIDM` package. We use the first scenario of @Erdmann:2025 here.
+```{r}
+#| label: analysis_dates
+nEventPFS <- 433
+nEventOS <- 630
+```
+
+## Individual patient data for PFS and OS
+
+Individual patient data for PFS and OS are simulated based on a time-homogeneous Markovian multi-state model as described e.g. in @Meller:2019. We simulate data with the `simIDM` package. We use the first scenario of @Erdmann:2025 here. The parameters for both treatment groups (i.e. the intensities for the transitions between the states of stable disease (0), progressive disease (1) and death (2)) are given in the follwoing code chunk.
+
+```{r}
+#| label: idm_settings
+transitionTrt <- exponential_transition(h01 = 0.06, h02 = 0.3, h12 = 0.3)
+transitionPl <- exponential_transition(h01 = 0.1, h02 = 0.4, h12 = 0.3)
+transitionList <- list(transitionPl, transitionTrt)
+```
+
+## Recruitment and censoring mechanism
+
+Patients are recruited over a time period of 32 months with a constant recruitment rate of 50 patients per month. As we assume a 1:1 randomisation ratio, this corresponds to a total sample size of 1600 patients with 800 patients in each treatment group. Besides administrative censoring at the end of the trial, we assume that there is additional loss to follow-up with a rate of 10% in 12 months.
+
+```{r}
+#| label: recruitment_censoring
+# Recruitment
+recr_rate_per_arm <- 25
+recr_duration <- 32
+max_n_per_arm <- 32 * 25
+
+# Loss to follow-up
+drprate <- 0.1
+drptime <- 12
+```
+
+## Simulated data
+
+All of the parameters described above are used to simulate individual patient data for PFS and OS for the trial design considered here. The simulated data are stored in the `Sim` object. The function `getDatasetWideFormat()` is used to transform the simulated data into a format that is suitable for the analyses of the testing procedures.
+
+```{r}
+#| label: simulate_pfs_os
+set.seed(1262025)
+Sim <- getDatasetWideFormat(getOneClinicalTrial(
+        nPat = rep(max_n_per_arm, 2),
+        transitionByArm = transitionList,
+        dropout = list(rate = drprate, time = drptime),
+        accrual = list(param = "intensity", value = recr_rate_per_arm)
+      ))
+```
 
 # Interim analysis
 
-## Estimated correlation matrix
+## Application of administrative censoring 
+
+To obtain the data to be analysed at the interim analysis, we apply administrative censoring to the simulated data. The first few rows of the resulting dataset are shown in the following code chunk.
+
+```{r}
+#| label: admin_censoring_interim
+
+studyCensored1 <- censoringByNumberEvents(
+        data = Sim,
+        eventNum = nEventPFS,
+        typeEvent = "PFS"
+      )
+studyCensored1 <- studyCensored1 |>
+  mutate(group = trt - 1) |>
+  select(-c("CensoredOS", "trt")) |>
+  relocate(group, .after = "id")
+kable(head(studyCensored1))
+```
+
+## Computation of test statistics and estimated correlation matrix
+
+We use our own function `test_stat_calc_single()` to compute the test statistics for the PFS and OS hypotheses at the interim analysis. The function also estimates the correlation between these test statistics.
+
+```{r}
+#| label: test_stats_interim
+interim_stats <- test_stat_calc_single(studyCensored1)
+```
+
+The vector of interim test statistics $(U_{\text{PFS}}(A_{\text{PFS}}), U_{\text{OS}}(A_{\text{PFS}}))$, according to the notation of @Danzer:2025, is given by
+$$
+\begin{pmatrix}
+  `{r} interim_stats[[1]][1]` \\
+  `{r} interim_stats[[1]][2]`
+\end{pmatrix}
+$$
+
+The estimated covariance matrix is given by
+$$
+\begin{pmatrix}
+  `{r} interim_stats[[2]][1, 1]` & `{r} interim_stats[[2]][1, 2]` \\
+  `{r} interim_stats[[2]][2, 1]` & `{r} interim_stats[[2]][2, 2]`
+\end{pmatrix}
+$$
+
+## Determination of decisions at interim analysis
+
+For the 11 testing procedures mentioned above, we now want to outline how to determine the decisions at the interim analysis. We first look at the decisions driven by $U_{\text{PFS}}(A_{\text{PFS}})$ for the seven procedures that do not exploit the correlation of the test statistics by design.
+For the group-sequential procedures, the local significance level for OS at the interim analysis is determined by the O'Brien-Fleming spending function of Lan and DeMets [see @Lan:83]. It can be determined by the `getDesignGroupSequential()` function of the `rpact` package using the information fraction for OS at the interim analysis. Its computation and the resulting local significance level for OS at the interim analysis are given in the following code chunk.
+
+```{r}
+#| label: local_os_levels_interim
+```
+
+| Procedure | Local significance level for PFS | Local significance level for OS |
+|-------------|-------------------------------:|------:|
+| BON         | `{r} alpha * bretz_weight_pfs` |     0 | 
+| EX/LAST     | `{r} alpha * bretz_weight_pfs` |     0 |
+| EX/FIRST    | `{r} alpha * bretz_weight_pfs` |     0 |
+| BON/GS      | `{r} alpha * bretz_weight_pfs` |     0 |
+| EX/GS/LAST  | `{r} alpha * bretz_weight_pfs` |   '{r}' |
+| EX/GS/FIRST | `{r} alpha * bretz_weight_pfs` |     0 |
+| OS          | 0                              |     0 |
+
 
 # Final analysis
 

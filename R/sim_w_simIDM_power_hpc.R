@@ -137,7 +137,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
     for (i in seq(sim_num)) {
       Sim <- getDatasetWideFormat(getOneClinicalTrial(
-        nPat = c(800, 800), #seed = 181993,
+        nPat = c(800, 800),
         transitionByArm = transitionList,
         dropout = list(rate = drprate, time = drptime),
         accrual = list(param = "intensity", value = 25)
