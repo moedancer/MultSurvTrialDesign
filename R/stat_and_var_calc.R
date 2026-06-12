@@ -2,6 +2,43 @@ require(dplyr)
 require(mvtnorm)
 require(matrixcalc)
 
+### Computation of test statistics and covariance matrix for a single analysis
+# single_analysis_data has to be a data frame with columns
+# group: treatment group indicator (0/1)
+# PFStime, PFSevent: censored PFS time and event indicator
+# OStime, OSevent: censored OS time and event indicator
+test_stat_calc_single <- function(single_analysis_data) {
+  n <- nrow(single_analysis_data)
+
+  test_stats <- rep(NA, 2)
+  cov_mat <- matrix(NA, ncol = 2, nrow = 2)
+
+  name_vec <- c("PFS", "OS")
+  names(test_stats) <- rownames(cov_mat) <- colnames(cov_mat) <- name_vec
+
+  pfs_obj <- w_calculator(single_analysis_data[, c(
+    "group",
+    "PFStime",
+    "PFSevent"
+  )])
+  test_stats["PFS"] <- 1 / sqrt(n) * pfs_obj[[1]]
+  w_pfs <- pfs_obj[[3]]
+  cov_mat["PFS", "PFS"] <- pfs_obj[[2]]
+
+  os_obj <- w_calculator(single_analysis_data[, c(
+    "group",
+    "OStime",
+    "OSevent"
+  )])
+  test_stats["OS"] <- 1 / sqrt(n) * os_obj[[1]]
+  w_os <- os_obj[[3]]
+  cov_mat["OS", "OS"] <- os_obj[[2]]
+
+  cov_mat["PFS", "OS"] <- cov_mat["OS", "PFS"] <- (w_pfs %*% w_os) / n
+
+  return(list(test_stats, cov_mat))
+}
+
 ### Computation of test statistics and covariance matrix
 # complete_study_data has to be a data frame with columns
 # group: treatment group indicator (0/1)
