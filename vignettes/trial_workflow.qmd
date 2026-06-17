@@ -216,8 +216,6 @@ os_alphaIncr_bon <- (c(
   alpha * bretz_weight_os
 ) -
   c(0, os_alphaSpent_bon))[1:2]
-# Extract critical values
-os_criticalValues_bon <- os_gs_design_bon$criticalValues
 ```
 
 The following table contains the local significance levels for the test of the PFS and OS hypotheses at the interim analysis that would imply a rejection of the global null hypothesis.
@@ -242,7 +240,7 @@ In comparison to REC/GS/LAST and REC/GS/FIRST, the new procedures EX/GS/LAST and
 
 ```{r}
 #| label: inflation_factor_interim
-inflation_factor_interim <- inflation_factor(
+infl_factor_interim <- inflation_factor(
   current_levels = c(alpha * bretz_weight_pfs, os_alphaIncr_bon[1]),
   available_level = alpha * bretz_weight_pfs + os_alphaIncr_bon[1],
   covariance_matrix = interim_var_est
@@ -255,8 +253,8 @@ With this inflation factor, the local levels for the new procedures amount to
 |-----|-----:|-----:|-----:|-----:|-----:|
 | EX/LAST | 1 |`{r} alpha * bretz_weight_pfs`| `{r} round(qnorm(alpha * bretz_weight_pfs), 4)` | 0 | - |
 | EX/FIRST | 1 |`{r} alpha * bretz_weight_pfs`| `{r} round(qnorm(alpha * bretz_weight_pfs), 4)` | 0 | - |
-| EX/GS/LAST | `{r} round(inflation_factor_interim, 4)`|`{r} round(inflation_factor_interim * alpha * bretz_weight_pfs, 4)` | `{r} round(qnorm(inflation_factor_interim * alpha * bretz_weight_pfs), 4)` | `{r} round(inflation_factor_interim * os_stageLevels_bon[1], 4)` | `{r} round(qnorm(inflation_factor_interim * os_stageLevels_bon[1]), 4)` |
-| EX/GS/FIRST | `{r} round(inflation_factor_interim, 4)`|`{r} round(inflation_factor_interim * alpha * bretz_weight_pfs, 4)` | `{r} round(qnorm(inflation_factor_interim * alpha * bretz_weight_pfs), 4)` | `{r} round(inflation_factor_interim * os_stageLevels_bon[1], 4)` | `{r} round(qnorm(inflation_factor_interim * os_stageLevels_bon[1]), 4)` |
+| EX/GS/LAST | `{r} round(infl_factor_interim, 4)`|`{r} round(infl_factor_interim * alpha * bretz_weight_pfs, 4)` | `{r} round(qnorm(infl_factor_interim * alpha * bretz_weight_pfs), 4)` | `{r} round(infl_factor_interim * os_stageLevels_bon[1], 4)` | `{r} round(qnorm(infl_factor_interim * os_stageLevels_bon[1]), 4)` |
+| EX/GS/FIRST | `{r} round(infl_factor_interim, 4)`|`{r} round(infl_factor_interim * alpha * bretz_weight_pfs, 4)` | `{r} round(qnorm(infl_factor_interim * alpha * bretz_weight_pfs), 4)` | `{r} round(infl_factor_interim * os_stageLevels_bon[1], 4)` | `{r} round(qnorm(infl_factor_interim * os_stageLevels_bon[1]), 4)` |
 
 ## Recycling the type I error level
 
@@ -266,119 +264,261 @@ As soon as the global null hypothesis has been rejected, we can reallocate the l
 
 If $U_{\text{PFS}}(A_{\text{PFS}})$ exceeds the critical bounds mentioned above, the local level is reallocated to the test of the OS hypothesis. The procedures we consider here deal differently with this reallocated level. The BON procedure does not use the reallocated level at all. The procedures with the suffix "LAST" use the reallocated level at the final analysis. Hence, the critocal values do not differ from those given above. The procedures with the suffix "FIRST" use the reallocated level directly at the interim analysis. This leads to different $\alpha$-spending functions. 
 
+These functions do not follow a standard form anymore. However, they can be easily implemented by the `getDesignGroupSequential()` function of the `rpact` package. To ensure that the code that follows isn’t too repetitive, we’ll define the following wrapper function.
+
+```{r}
+#| label: wrapper_user_defined_spending
+custom_gs_design <- function(spending_fct) {
+  return(
+    getDesignGroupSequential(
+      kMax = 2,
+      alpha = alpha,
+      sided = 1,
+      typeOfDesign = "asUser",
+      # Provide user-defined spending function as defined above
+      userAlphaSpending = spending_fct,
+      informationRates = c(info_fraction_os, 1)
+    )
+  )
+}
+```
+
 **REC/LAST and EX/LAST**:
 
-Text
+We use the reallocated level at the final analysis. As there was also initially no intention to spend any $\alpha$ for OS, we only test OS at the final analysis. The $\alpha$-spending function is thus simply given by
 $$
 f_{\text{OS, rec}}(t) =  \rho_{\text{PFS}}\alpha \cdot 1(t \geq 1) + \rho_{\text{OS}}\alpha \cdot 1(t \geq 1) = \alpha \cdot 1(t \geq 1)
 $$
 
-As we can seem no alpha is spent at the interim analysis for those approaches. The full alpha level is spent at the final analysis.
-
 **REC/FIRST and EX/FIRST**:
 
-Text
+We use the reallocated level directly at the interim analysis. The remaining portion of the significance level will be spent at the final analysis, as initially planned. The $\alpha$-spending function is thus given by
 $$
 f_{\text{OS, rec}}(t) =  \rho_{\text{PFS}}\alpha \cdot 1(t \geq \tau_{\text{OS}}(A_{\text{PFS}})) + \rho_{\text{OS}}\alpha \cdot 1(t \geq 1)
 $$
 
+It is implemented in the following way:
+
 ```{r}
 #| label: spending_rec_first
-os_gs_design_recfirst <- getDesignGroupSequential(
-  kMax = 2,
-  alpha = alpha,
-  sided = 1,
-  typeOfDesign = "asUser",
-  # Provide user-defined spending function as defined above
-  userAlphaSpending = c(
-    alpha * bretz_weight_pfs,
-    alpha
-  ),
-  informationRates = c(info_fraction_os, 1)
+recfirst_spending <- c(
+  alpha * bretz_weight_pfs,
+  alpha
 )
+os_gs_design_recfirst <- custom_gs_design(recfirst_spending)
 os_stageLevels_recfirst <- os_gs_design_recfirst$stageLevels
 os_alphaSpent_recfirst <- os_gs_design_recfirst$alphaSpent
 os_alphaIncr_recfirst <- (c(os_alphaSpent_recfirst, alpha) -
   c(0, os_alphaSpent_recfirst))[1:2]
-os_criticalValues_recfirst <- os_gs_design_recfirst$criticalValues
 ```
 
 **REC/GS/LAST and EX/GS/LAST**:
 
-Text
+The reallocated level is used at the final analysis. We keep the O'Brien-Fleming spending function of Lan and DeMets for the initial level $\rho_{\text{OS}}\alpha$ which includes spending of a small positive amount at the interim analysis. The resulting $\alpha$-spending function is thus given by
 $$
 f_{\text{OS, rec}}(t) = 2 - 2 \Phi\left(\frac{\Phi^{-1}(1 - \frac{\rho_{\text{OS}}\alpha}{2})}{\sqrt{t}}\right) + \rho_{\text{PFS}}\alpha \cdot 1(t \geq 1)
 $$
 
+It is implemented in the following way:
 ```{r}
 #| label: spending_rec_gs_last
-os_gs_design_recgslast <- getDesignGroupSequential(
-  kMax = 2,
-  alpha = alpha,
-  sided = 1,
-  typeOfDesign = "asUser",
-  # Provide user-defined spending function as defined above
-  userAlphaSpending = c(
-    os_alphaSpent_bon[1],
-    os_alphaSpent_bon[2] + alpha * bretz_weight_pfs
-  ),
-  informationRates = c(info_fraction_os, 1)
+recgslast_spending <- c(
+  os_alphaSpent_bon[1],
+  os_alphaSpent_bon[2] + alpha * bretz_weight_pfs
 )
+os_gs_design_recgslast <- custom_gs_design(recgslast_spending)
 os_stageLevels_recgslast <- os_gs_design_recgslast$stageLevels
 os_alphaSpent_recgslast <- os_gs_design_recgslast$alphaSpent
 os_alphaIncr_recgslast <- (c(os_alphaSpent_recgslast, alpha) -
   c(0, os_alphaSpent_recgslast))[1:2]
-os_criticalValues_recgslast <- os_gs_design_recgslast$criticalValues
 ```
 
 
 **REC/GS/FIRST and EX/GS/FIRST**:
 
-Text
+The reallocated level is used at the interim analysis. It is added to the small positive amount that we already planned on spending at the interim analysis according to the O'Brien-Fleming spending function of Lan and DeMets with the initial level $\rho_{\text{OS}}\alpha$. The resulting $\alpha$-spending function is thus given by
 $$
 f_{\text{OS, rec}}(t) = 2 - 2 \Phi\left(\frac{\Phi^{-1}(1 - \frac{\rho_{\text{OS}}\alpha}{2})}{\sqrt{t}}\right) + \rho_{\text{PFS}}\alpha \cdot 1(t \geq \tau_{\text{OS}}(A_{\text{PFS}}))
 $$
 
-
+It is implemented in the following way:
 ```{r}
 #| label: spending_rec_gs_first
-os_gs_design_recgsfirst <- getDesignGroupSequential(
-  kMax = 2,
-  alpha = alpha,
-  sided = 1,
-  typeOfDesign = "asUser",
-  # Provide user-defined spending function as defined above
-  userAlphaSpending = os_alphaSpent_bon + alpha * bretz_weight_pfs,
-  informationRates = c(info_fraction_os, 1)
-)
+recgsfirst_spending <- os_alphaSpent_bon + alpha * bretz_weight_pfs
+os_gs_design_recgsfirst <- custom_gs_design(recgsfirst_spending)
 os_stageLevels_recgsfirst <- os_gs_design_recgsfirst$stageLevels
 os_alphaSpent_recgsfirst <- os_gs_design_recgsfirst$alphaSpent
 os_alphaIncr_recgsfirst <- (c(os_alphaSpent_recgsfirst, alpha) -
   c(0, os_alphaSpent_recgsfirst))[1:2]
-os_criticalValues_recgsfirst <- os_gs_design_recgsfirst$criticalValues
 ```
 
 | Procedure | Local level for OS | Critical value for OS |
-| BON | 
-| REC/LAST | `{r} alpha` | `{r} round(qnorm(alpha), 4)` |
-| REC/FIRST | `{r} alpha` | `{r} round(qnorm(alpha), 4)` |
-| EX/LAST | `{r} alpha` | `{r} round(qnorm(alpha), 4)` |
-| EX/FIRST | `{r} alpha` | `{r} round(qnorm(alpha), 4)` |
-| BON/GS | `{r} round(os_stageLevels_bon[2], 4)` | `{r} round(qnorm(os_stageLevels_bon[2]), 4)` | |
-| REC/GS/LAST | `{r} round(os_stageLevels_bon[2], 4)` | `{r} round(qnorm(os_stageLevels_bon[2]), 4)` | |
-| REC/GS/FIRST | `{r} round(os_stageLevels_bon[2], 4)` | `{r} round(qnorm(os_stageLevels_bon[2]), 4)` | |
-| EX/GS/LAST | `{r} round(inflation_factor_interim * os_stageLevels_bon[2], 4)` | `{r} round(qnorm(inflation_factor_interim * os_stageLevels_bon[2]), 4)` | |
-| EX/GS/FIRST | `{r} round(inflation_factor_interim * os_stageLevels_bon[2], 4)` | `{r} round(qnorm(inflation_factor_interim * os_stageLevels_bon[2]), 4)` | |
-| OS | `{r} alpha` | `{r} round(qnorm(alpha), 4)` |
+|-----|-----:|-----:|
+| BON | 0 | - |
+| REC/LAST & EX/LAST | 0 | - |
+| REC/FIRST & EX/FIRST | `{r} round(alpha * bretz_weight_pfs, 4)` | `{r} round(qnorm(alpha * bretz_weight_pfs), 4)` |
+| BON/GS | `{r} round(os_stageLevels_bon[1], 4)` | `{r} round(qnorm(os_stageLevels_bon[1]), 4)` |
+| REC/GS/LAST & EX/GS/LAST | `{r} round(os_stageLevels_recgslast[1], 4)` | `{r} round(qnorm(os_stageLevels_recgslast[1]), 4)` |
+| REC/GS/FIRST & EX/GS/FIRST | `{r} round(os_stageLevels_recgsfirst[1], 4)` | `{r} round(qnorm(os_stageLevels_recgsfirst[1]), 4)` |
+| OS | 0 | - |
+
 ### Reallocation from OS to PFS
+
+If $U_{\text{OS}}(A_{\text{PFS}})$ exceeds the critical bounds mentioned above, the local level can be reallocated to the test of the PFS hypothesis. However, this is now only of minor interest because an advantage in OS is usually more relevant than an advantage in PFS. Hence, we do not consider this case in detail here. Also, this can only happen for the procedures which initially spend some alpha for OS at the interim analysis. These are all the procedures with "GS" in their name.
 
 # Final analysis
 
-## Estimated correlation matrix
+## Application of administrative censoring 
+
+To obtain the data to be analysed at the final analysis, we apply administrative censoring to the simulated data. This is determined by the pre-determined number of OS events. The first few rows of the resulting dataset are shown in the following code chunk.
+
+```{r}
+#| label: admin_censoring_final
+studyCensored2 <- censoringByNumberEvents(
+  data = Sim,
+  eventNum = nEventOS,
+  typeEvent = "OS"
+)
+studyCensored2 <- studyCensored2 |>
+  mutate(group = trt - 1) |>
+  select(-c("CensoredOS", "trt")) |>
+  relocate(group, .after = "id")
+kable(head(studyCensored2))
+```
+
+## Computation of test statistics and estimated correlation matrix
+
+In order to estimate the correlation between all test statistics (i.e. across endpoints and across analyses)
+
+```{r}
+#| label: combine_interim_and_final_data
+complete_data_temp <- merge(
+  studyCensored1,
+  studyCensored2,
+  by = "id",
+  all = TRUE,
+  suffixes = c("_a1", "_a2")
+)
+complete_data <- complete_data_temp |>
+  select(
+    id,
+    group_a2,
+    PFStime_a1,
+    PFSevent_a1,
+    OStime_a1,
+    OSevent_a1,
+    PFStime_a2,
+    PFSevent_a2,
+    OStime_a2,
+    OSevent_a2
+  ) |>
+  rename(group = group_a2) |>
+  mutate(across(-c(id, group), ~ replace_na(.x, 0)))
+```
+
+We use our own function `test_stat_calc_single()` to compute the test statistics for the PFS and OS hypotheses at both analyses. The function also estimates the pairwise correlations between all four test statistics.
+
+```{r}
+#| label: test_stats_final
+all_stats <- test_stat_calc(complete_data)
+all_raw_stats <- all_stats[[1]]
+all_var_est <- all_stats[[2]]
+# Compute standardised test statistics
+all_std_stats <- all_raw_stats / sqrt(diag(all_var_est))
+```
+
+The vector of test statistics $(U_{\text{PFS}}(A_{\text{PFS}}), U_{\text{OS}}(A_{\text{PFS}}), U_{\text{PFS}}(A_{\text{OS}}), U_{\text{OS}}(A_{\text{OS}}))$, according to the notation of @Danzer:2025, is given by
+$$
+\begin{pmatrix}
+  `{r} round(all_raw_stats[1], 4)` \\
+  `{r} round(all_raw_stats[2], 4)` \\
+  `{r} round(all_raw_stats[3], 4)` \\
+  `{r} round(all_raw_stats[4], 4)`
+\end{pmatrix}
+$$
+
+The estimated covariance matrix is given by
+$$
+\begin{pmatrix}
+  `{r} round(all_var_est[1, 1], 4)` & `{r} round(all_var_est[1, 2], 4)` & `{r} round(all_var_est[1, 3], 4)` & `{r} round(all_var_est[1, 4], 4)` \\
+  `{r} round(all_var_est[2, 1], 4)` & `{r} round(all_var_est[2, 2], 4)` & `{r} round(all_var_est[2, 3], 4)` & `{r} round(all_var_est[2, 4], 4)` \\
+  `{r} round(all_var_est[3, 1], 4)` & `{r} round(all_var_est[3, 2], 4)` & `{r} round(all_var_est[3, 3], 4)` & `{r} round(all_var_est[3, 4], 4)` \\
+  `{r} round(all_var_est[4, 1], 4)` & `{r} round(all_var_est[4, 2], 4)` & `{r} round(all_var_est[4, 3], 4)` & `{r} round(all_var_est[4, 4], 4)`
+\end{pmatrix}
+$$
+
+The standardised test statistics of the final analysis amount to
+
+$$
+U_{\text{PFS}}(A_{\text{OS}}) = `{r} round(all_std_stats[3], 4)` \quad\text{ and }\quad U_{\text{OS}}(A_{\text{OS}}) = `{r} round(all_std_stats[4], 4)`.
+$$
 
 ## Testing the global null hypothesis
 
+If the global null hypothesis has not been rejected at the interim analysis, we can now potentially reject it based on $U_{\text{OS}}(A_{\text{OS}})$. Please note that an investigation of $U_{\text{PFS}}(A_{\text{OS}})$ is not intended for any of the testing procedures considered here. However, it would be possible in general.
+
+### Established procedures
+
+The approaches BON, REC/LAST and REC/FIRST do not spend any alpha for OS at the interim analysis as long as the global null hypothesis has not been rejected. Hence, the local level for OS at the final analysis is simply $\rho_{\text{OS}}\alpha$ in this case. The approaches BON/GS, REC/GS/FIRST and REC/GS/LAST spend their remaining error level as determined by the spending function $f_{\text{OS, glob}}$ from above. The procedure named OS uses the full significance level now at the final analysis and spends it all for the analysis of the OS test statistics. The corresponding local significance levels and critical values are given in the following table.
+
+| Procedure | Local level for OS | Critical value for OS |
+|-----|-----:|-----:|
+| BON | `{r} alpha * bretz_weight_os` | `{r} round(qnorm(alpha * bretz_weight_os), 4)` |
+| REC/LAST | `{r} alpha * bretz_weight_os` | `{r} round(qnorm(alpha * bretz_weight_os), 4)` |
+| REC/FIRST | `{r} alpha * bretz_weight_os` | `{r} round(qnorm(alpha * bretz_weight_os), 4)` |
+| BON/GS | `{r} round(os_stageLevels_bon[2], 4)` | `{r} round(qnorm(os_stageLevels_bon[2]), 4)` |
+| REC/GS/LAST | `{r} round(os_stageLevels_bon[2], 4)` | `{r} round(qnorm(os_stageLevels_bon[2]), 4)` |
+| REC/GS/FIRST | `{r} round(os_stageLevels_bon[2], 4)` | `{r} round(qnorm(os_stageLevels_bon[2]), 4)` |
+| OS | `{r} round(alpha, 4)` | `{r} round(qnorm(alpha), 4)` |
+
 # Summary
+
+For the newly proposed procedures EX/LAST, EX/FIRST, EX/GS/LAST and EX/GS/FIRST, we can exploit the correlation of the test statistics. Again, we compute inflation factors that can be multiplied with the originally intended level. These calculations involve all test statistics that have already been involved into testing the global null hypothesis in prior analyses, all test statistics that shall be used to test the global null hypothesis at the current analysis and the estimated covariance matrix between those test statistics. As $U_{\text{OS}}(A_{\text{PFS}})$ has not been used by EX/LAST and EX/FIRST for this purpose while it has been used by EX/GS/LAST and EX/GS/FIRST, the computations between these procedures differ. These inflation factors can then be multiplied with the level that we originally intended to spend to obtain the local levels for the new procedures. For the procedures EX/GS/LAST and EX/GS/FIRST, this level that we originally intended to spend is determined by the increments of the spending function $f_{\text{OS, glob}}$.
+
+**EX/LAST and EX/FIRST**:
+
+TODO: Erklärung
+
+```{r}
+#| label: inflation_factor_nongs_final
+infl_factor_nongs <- inflation_factor(
+  current_levels = alpha * bretz_weight_os,
+  previous_levels = alpha * bretz_weight_pfs,
+  available_level = alpha,
+  covariance_matrix = all_var_est[
+    c("PFS_a1", "OS_a2"),
+    c("PFS_a1", "OS_a2")
+  ]
+)
+```
+
+**EX/GS/LAST and EX/GS/FIRST**:
+
+TODO: Erklärung
+
+```{r}
+#| label: inflation_factor_gs_final
+infl_factor_gs <- inflation_factor(
+  current_levels = os_alphaIncr_bon[2],
+  previous_levels = infl_factor_interim *
+    c(alpha * bretz_weight_pfs, os_alphaIncr_bon[1]),
+  available_level = alpha,
+  covariance_matrix = all_var_est[
+    c("PFS_a1", "OS_a1", "OS_a2"),
+    c("PFS_a1", "OS_a1", "OS_a2")
+  ]
+)
+```
+
+As summarised by the following table, we obtain the following local significance levels and critical values to which the OS test statistic at the final analysis can be compared in order to reject the global null hypothesis.
+
+| Procedure | Inflation factor | Local level for OS | Critical value for OS|
+|-----|-----:|-----:|-----:|
+| EX/LAST | `{r} round(infl_factor_nongs, 4)` |`{r} round(infl_factor_nongs * alpha * bretz_weight_os, 4)`| `{r} round(qnorm(infl_factor_nongs * alpha * bretz_weight_os), 4)` |
+| EX/FIRST | `{r} round(infl_factor_nongs, 4)` |`{r} round(infl_factor_nongs * alpha * bretz_weight_os, 4)`| `{r} round(qnorm(infl_factor_nongs * alpha * bretz_weight_os), 4)` |
+| EX/GS/LAST | `{r} round(infl_factor_gs, 4)`|`{r} round(infl_factor_gs * os_alphaIncr_bon[2], 4)` | `{r} round(qnorm(infl_factor_gs * os_alphaIncr_bon[2]), 4)` |
+| EX/GS/FIRST | `{r} round(infl_factor_gs, 4)`|`{r} round(infl_factor_gs * os_alphaIncr_bon[2], 4)` | `{r} round(qnorm(infl_factor_gs * os_alphaIncr_bon[2]), 4)` |
+
 
 # References
 
