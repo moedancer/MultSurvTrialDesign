@@ -71,15 +71,17 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
     test_names <- c("PFS_a1", "OS_a1", "PFS_a2", "OS_a2")
     num_tests <- length(test_names)
     strategy_names <- c(
-      "standard",
-      "pass_on",
-      "shift_to_last",
-      "shift_at_interim",
-      "standard_gs",
-      "gs_pass_on",
-      "gs_shift_to_last",
-      "gs_shift_at_interim",
-      "final_os"
+      "BON",
+      "REC/LAST",
+      "REC/FIRST",
+      "EX/LAST",
+      "EX/FIRST",
+      "BON/GS",
+      "REC/GS/LAST",
+      "REC/GS/FIRST",
+      "EX/GS/LAST",
+      "EX/GS/FIRST",
+      "OS"
     )
     num_strategies <- length(strategy_names)
     metrics_names <- c("Rej_PFS", "Rej_OS", "Rej_One", "Rej_Both", "Early_Stop")
