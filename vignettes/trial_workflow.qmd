@@ -63,7 +63,7 @@ where $S^{Z=k}_\text{E}$ denotes the survival function of the time-to-event endp
 
 1. **BON**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis.
 2. **REC/LAST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/LAST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the alpha level for the OS hypothesis at the final analysis is increased to $\alpha$.
-3. **REC/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha$ at the final analysis. However, in contrast to the BON procedure, the REC/FIRST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the OS hypothesis is tested at level $\rho_{\text{PFS}} \alpha$ at the interim analysis. If unsuccessful, the remaining level $\rho_{\text{OS}} \alpha$ is spent at the final analysis as in a $\alpha$-spending approach.
+3. **REC/FIRST**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a test of the OS hypothesis at level $\rho_{\text{OS}} \alpha at the final analysis. However, in contrast to the BON procedure, the REC/FIRST procedure allows for a reallocation of the alpha level from the PFS hypothesis to the OS hypothesis if the PFS hypothesis is rejected at the interim analysis. Specifically, if the PFS hypothesis is rejected at the interim analysis, then the OS hypothesis is tested at level $\rho_{\text{PFS}} \alpha$ at the interim analysis. If unsuccessful, the remaining level $\rho_{\text{OS}} \alpha$ is spent at the final analysis as in a $\alpha$-spending approach.
 4. **EX/LAST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/LAST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.
 5. **EX/FIRST**: Improved closed testing procedure with exhaustion of the FWER. In addition to REC/FIRST, we exploit the correlation of test statistics for PFS and OS to inflate the local level of the test of the OS hypothesis if the PFS hypothesis has not been rejected at the interim analysis.
 6. **BON/GS**: Bonferroni-adjusted testing procedure with a test of the PFS hyopthesis at level $\rho_{\text{PFS}} \alpha$ at the interim analysis and a group-sequential procedure for the OS hypothesis at level $\rho_{\text{PFS}} \alpha$ according to an $\alpha$-spending approach based one the O'Brien-Fleming spending function of Lan and DeMets [see @Lan:83].  
@@ -129,7 +129,7 @@ All of the parameters described above are used to simulate individual patient da
 
 ```{r}
 #| label: simulate_pfs_os
-set.seed(1262025)
+set.seed(1720)
 Sim <- getDatasetWideFormat(getOneClinicalTrial(
   nPat = rep(max_n_per_arm, 2),
   transitionByArm = transitionList,
@@ -278,6 +278,8 @@ decisions$cv_glob_os_interim[
       "REC/GS/FIRST"
     )
 ] <- qnorm(os_stageLevels_bon[1])
+decisions$cv_updated_os_interim[decisions$procedures == "BON/GS"] <-
+  qnorm(os_stageLevels_bon[1])
 
 # Save critical values for final analysis of global null
 # Please note that these can already be computed at this stage
@@ -289,6 +291,8 @@ decisions$cv_glob_os_final[
       "REC/FIRST"
     )
 ] <- qnorm(alpha * bretz_weight_os)
+decisions$cv_updated_os_final[decisions$procedures == "BON"] <-
+  qnorm(alpha * bretz_weight_os)
 decisions$cv_glob_os_final[
   decisions$procedures %in%
     c(
@@ -297,6 +301,8 @@ decisions$cv_glob_os_final[
       "REC/GS/FIRST"
     )
 ] <- qnorm(os_stageLevels_bon[2])
+decisions$cv_updated_os_final[decisions$procedures == "BON/GS"] <-
+  qnorm(os_stageLevels_bon[2])
 ```
 
 The following table contains the local significance levels for the test of the PFS and OS hypotheses at the interim analysis that would imply a rejection of the global null hypothesis.
@@ -447,6 +453,17 @@ $$
 f_{\text{OS, rec}}(t) =  \rho_{\text{PFS}}\alpha \cdot 1(t \geq 1) + \rho_{\text{OS}}\alpha \cdot 1(t \geq 1) = \alpha \cdot 1(t \geq 1)
 $$
 
+```{r}
+#| label: spending_rec_last
+decisions$cv_updated_os_final[
+  decisions$procedures %in%
+    c(
+      "REC/LAST",
+      "EX/LAST"
+    )
+] <- qnorm(alpha)
+```
+
 **REC/FIRST and EX/FIRST**:
 
 We use the reallocated level directly at the interim analysis. The remaining portion of the significance level will be spent at the final analysis, as initially planned. The $\alpha$-spending function is thus given by
@@ -588,7 +605,6 @@ the decisions turn out to be the following:
 ```{r}
 #| label: decisions_reallocation_interim
 #| code-fold: true
-
 decisions <- decisions |>
   mutate(
     interim_pfs = interim_glob_pfs |
@@ -743,6 +759,13 @@ The approaches BON, REC/LAST and REC/FIRST do not spend any alpha for OS at the 
 
 : Local significance levels at final analysis for established procedures if global null hypothesis has not been rejected {#tbl-sig_levels_old_global_final}
 
+For the procedure called "OS" which uses the full significance level for testing the OS hypothesis at the final analysis, the local level is simply $\alpha$. The critical value for $U_{\text{OS}}(A_{\text{OS}})$ is thus given by $\Phi^{-1}(\alpha)$.
+```{r}
+#| label: critical_values_os_procedure
+decisions$cv_glob_os_final[decisions$procedures == "OS"] <- qnorm(alpha)
+decisions$cv_updated_os_final[decisions$procedures == "OS"] <- qnorm(alpha)
+```
+
 ### New procedures
 
 For the newly proposed procedures EX/LAST, EX/FIRST, EX/GS/LAST and EX/GS/FIRST, we can exploit the correlation of the test statistics. Again, we compute inflation factors that can be multiplied with the originally intended level. These calculations involve all test statistics that have already been involved into testing the global null hypothesis in prior analyses, all test statistics that shall be used to test the global null hypothesis at the current analysis and the estimated covariance matrix between those test statistics. As $U_{\text{OS}}(A_{\text{PFS}})$ has not been used by EX/LAST and EX/FIRST for this purpose while it has been used by EX/GS/LAST and EX/GS/FIRST, the computations between these procedures differ. These inflation factors can then be multiplied with the level that we originally intended to spend to obtain the local levels for the new procedures. For the procedures EX/GS/LAST and EX/GS/FIRST, this level that we originally intended to spend is determined by the increments of the spending function $f_{\text{OS, glob}}$.
@@ -797,19 +820,72 @@ decisions$cv_glob_os_final[
       "EX/GS/LAST",
       "EX/GS/FIRST"
     )
-] <- qnorm(infl_factor_gs * alpha * os_alphaIncr_bon[2])
+] <- qnorm(infl_factor_gs * os_alphaIncr_bon[2])
 ```
 
 As summarised by the following table, we obtain the following local significance levels and critical values to which the OS test statistic at the final analysis can be compared in order to reject the global null hypothesis.
 
 | Procedure | Inflation factor | Local level for OS | Critical value for OS|
-|-----|-----:|-----:|-----:|
+|:-----|-----:|-----:|-----:|
 | EX/LAST | `{r} round(infl_factor_nongs, 4)` |`{r} round(infl_factor_nongs * alpha * bretz_weight_os, 4)`| `{r} round(qnorm(infl_factor_nongs * alpha * bretz_weight_os), 4)` |
 | EX/FIRST | `{r} round(infl_factor_nongs, 4)` |`{r} round(infl_factor_nongs * alpha * bretz_weight_os, 4)`| `{r} round(qnorm(infl_factor_nongs * alpha * bretz_weight_os), 4)` |
 | EX/GS/LAST | `{r} round(infl_factor_gs, 4)`|`{r} round(infl_factor_gs * os_alphaIncr_bon[2], 4)` | `{r} round(qnorm(infl_factor_gs * os_alphaIncr_bon[2]), 4)` |
 | EX/GS/FIRST | `{r} round(infl_factor_gs, 4)`|`{r} round(infl_factor_gs * os_alphaIncr_bon[2], 4)` | `{r} round(qnorm(infl_factor_gs * os_alphaIncr_bon[2]), 4)` |
 
-: Local significance levels at final analysis for new procedures if global null hypothesis has not been rejected {#tbl-sig_levels_old_global_final}
+: Local significance levels at final analysis for new procedures if global null hypothesis has not been rejected yet {#tbl-sig_levels_old_global_final}
+
+### Determination of decisions
+
+For all eleven procedures, we determine the decisions about rejection of the global null hypothesis for the simulated data at the final analysis based on the local significance levels and the critical values given above. The results are shown in the following table.
+
+Based on the standardised test statistics
+
+$$
+\frac{U_{\text{PFS}}(A_{\text{OS}})}{\sqrt{\hat{\sigma}^2_{\text{PFS}}(A_{\text{OS}})}} = `{r} round(all_std_stats[3], 4)` \quad\text{ and }\quad \frac{U_{\text{OS}}(A_{\text{OS}})}{\sqrt{\hat{\sigma}^2_{\text{OS}}(A_{\text{PFS}})}} = `{r} round(all_std_stats[4], 4)`.
+$$
+
+the decisions turn out to be the following regarding the global null hypothesis:
+```{r}
+#| label: decisions_global_null_final
+# Determine decisions about rejection of global null hypothesis at interim analysis
+decisions <- decisions |>
+  mutate(
+    final_glob_pfs = interim_glob_pfs,
+    final_glob_os = interim_glob_os |
+      (all_std_stats[4] < cv_glob_os_final),
+    final_glob = final_glob_pfs | final_glob_os
+  )
+```
+
+```{r}
+#| label: tbl-display_decisions_global_null_final
+#| code-fold: true
+#| tbl-cap: "Decisions about rejection of global null hypothesis at final analysis"
+
+decisions |>
+  mutate(
+    cv_glob_os_final_display = case_when(
+      interim_glob  ~ "not necessary",
+      TRUE ~ as.character(round(cv_glob_os_final, 4))
+    )
+  )|>
+  select(
+    procedures,
+    interim_glob,
+    cv_glob_os_final_display,
+    final_glob
+  ) |>
+  kable(
+    col.names = c(
+      "Procedure",
+      "Global null rejected at interim?",
+      "Critical value for OS",
+      "Reject global null?"
+    )
+  )
+```
+
+The following subsection also shows how to proceed if the global null hypothesis has been rejected.
 
 ## Recycling the type I error level
 
@@ -830,17 +906,97 @@ If $U_{\text{PFS}}(A_{\text{PFS}})$ exceeds the critical bounds given in @tbl-si
 
 : Local significance levels at interim analysis for all procedures if PFS has already been rejected {#tbl-sig_levels_os_interim}
 
+### Reallocation from OS to PFS
+
+If the global null hypothesis has not been rejected at the interim analysis and $U_{\text{OS}}(A_{\text{OS}})$ now exceeds the critical bounds mentioned above, the local level can be reallocated to the test of the PFS hypothesis. However, this is now only of minor interest because an advantage in OS is usually more relevant than an advantage in PFS. Hence, we do not consider this case in detail here. 
+
+### Determination of decisions
+
+For all eleven procedures, we determine the decisions about further rejections for the simulated data at the interim analysis based on the local significance levels and the critical values given above. The results are shown in the following table.
+
+Based on the standardised test statistics
+
+$$
+\frac{U_{\text{PFS}}(A_{\text{OS}})}{\sqrt{\hat{\sigma}^2_{\text{PFS}}(A_{\text{OS}})}} = `{r} round(all_std_stats[3], 4)` \quad\text{ and }\quad \frac{U_{\text{OS}}(A_{\text{OS}})}{\sqrt{\hat{\sigma}^2_{\text{OS}}(A_{\text{OS}})}} = `{r} round(all_std_stats[4], 4)`.
+$$
+
+the decisions turn out to be the following:
+
+```{r}
+#| label: decisions_reallocation_final
+#| code-fold: true
+decisions <- decisions |>
+  mutate(
+    final_pfs = interim_pfs,
+    final_os = interim_os | final_glob_os |
+      (final_glob & (all_std_stats[4] < cv_updated_os_final))
+  )
+
+decisions |>
+  mutate(
+    cv_updated_os_final_display = case_when(
+      final_glob & final_glob_os ~ "not necessary",
+      final_glob & !final_glob_os ~ as.character(round(
+        cv_updated_os_final,
+        4
+      )),
+      TRUE ~ "not applicable"
+    )
+  ) |>
+  select(
+    procedures,
+    final_glob,
+    cv_updated_os_final_display,
+    final_os
+  ) |>
+  kable(
+    col.names = c(
+      "Procedure",
+      "Reject global null?",
+      "Critical value for OS (updated)",
+      "Reject OS hypothesis?"
+    )
+  )
+```
+
 # Summary
 
-In the previous sections, we have outlined how to compute critical boundaries for the different testing procedures and how to proceed through the analysis depending on the observed results. Here, we want to take a closer look on how the procedures for the simulated trial would have proceeded based on the observed test statistics.
+In the previous sections, we have outlined how to compute critical boundaries for the different testing procedures and how to proceed through the analysis depending on the observed results. Here, we want to take summarise how the procedures for the simulated trial proceeded.
 
 ```{r}
 #| label: summary_proceeding
-
+#| code-fold: true
+decisions |>
+  mutate(summary_interim = case_when(
+    interim_glob & !interim_pfs & !interim_os ~ "Global null hypothesis rejected",
+    interim_glob & interim_pfs & !interim_os ~ "Global and PFS hypothesis rejected",
+    interim_glob & !interim_pfs & interim_os ~ "Global and OS hypothesis rejected",
+    interim_glob & interim_pfs & interim_os ~ "Global, PFS and OS hypothesis rejected",
+    !interim_glob ~ "No rejection",
+    TRUE ~ NA
+  ),
+  summary_final = case_when(
+    final_glob & !final_pfs & !final_os ~ "Global null hypothesis rejected",
+    final_glob & final_pfs & !final_os ~ "Global and PFS hypothesis rejected",
+    final_glob & !final_pfs & final_os ~ "Global and OS hypothesis rejected",
+    final_glob & final_pfs & final_os ~ "Global, PFS and OS hypothesis rejected",
+    !final_glob ~ "No rejection",
+    TRUE ~ NA
+  )) |>
+  select(
+    procedures,
+    summary_interim,
+    summary_final
+  ) |>
+  kable(
+    col.names = c(
+      "Procedure",
+      "Summary of decisions at interim analysis",
+      "Summary of decisions at final analysis"
+    )
+  )
 
 ```
-
-| Procedure | Interim std. PFS test statistic | Interim std. OS test statistic |
 
 # References
 
