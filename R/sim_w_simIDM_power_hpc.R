@@ -561,4 +561,10 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
 
 stopCluster(my_cluster)
 
-save(power_metrics, file = "results/data/closed_testing_power_metrics.Rda")
+if (hpc_version) {
+  # Save results with default filename if no custom event rates are provided
+  save(power_metrics, file = "closed_testing_power_metrics.Rda")
+} else {
+  # Save results with default filename for non-HPC version
+  save(power_metrics, file = "results/data/closed_testing_power_metrics.Rda")
+}
