@@ -446,7 +446,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       #  - Exploit dependence with PFS if PFS not rejected
       #  - Propagate level of PFS if PFS rejected
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions[i, 4, "PFS_a1"] <- 1
+        decisions[i, 4, "PFS_a1"] <- TRUE
         decisions[i, 4, "OS_a2"] <- (p_values[i, "OS_a2"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
@@ -464,7 +464,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       }
 
       if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions_frailty[i, 4, "PFS_a1"] <- 1
+        decisions_frailty[i, 4, "PFS_a1"] <- TRUE
         decisions_frailty[i, 4, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
           alpha)
       } else {
@@ -490,7 +490,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       #  - only at final if PFS not successful
       #    (exploit dependence)
       if (p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions[i, 5, "PFS_a1"] <- 1
+        decisions[i, 5, "PFS_a1"] <- TRUE
         decisions[i, 5, "OS_a1"] <- (p_values[i, "OS_a1"] <=
           alpha * bretz_weight_pfs)
         temp_factor <- inflation_factor(
@@ -521,7 +521,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       }
 
       if (p_values_frailty[i, "PFS_a1"] <= alpha * bretz_weight_pfs) {
-        decisions_frailty[i, 5, "PFS_a1"] <- 1
+        decisions_frailty[i, 5, "PFS_a1"] <- TRUE
         decisions_frailty[i, 5, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
           alpha * bretz_weight_pfs)
         temp_factor <- inflation_factor(
@@ -785,7 +785,7 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
         p_values_frailty[i, "PFS_a1"] <=
           alpha * bretz_weight_pfs * temp_factor_interim
       ) {
-        decisions_frailty[i, 10, "PFS_a1"] <- 1
+        decisions_frailty[i, 10, "PFS_a1"] <- TRUE
         decisions_frailty[i, 10, "OS_a1"] <- (p_values_frailty[i, "OS_a1"] <=
           os_stageLevels_shiftInterim[1])
         decisions_frailty[i, 10, "OS_a2"] <- (p_values_frailty[i, "OS_a2"] <=
