@@ -442,23 +442,15 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
         p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs * temp_factor_interim
       ) {
         decisions[i, 9, "PFS_a1"] <- TRUE
+        # Note: Once, PFS is rejected, we do not exploit dependence anymore and can directly use the critical values from the group-sequential design with shifted alpha
         decisions[i, 9, "OS_a1"] <- (p_values[i, "OS_a1"] <=
-          os_stageLevels_corrected[1])
-        temp_factor <- inflation_factor(
-          current_levels = alpha - os_stageLevels_corrected[1],
-          previous_levels = os_stageLevels_corrected[1],
-          available_level = alpha,
-          covariance_matrix = var_ests[
-            i,
-            c("OS_a1", "OS_a2"),
-            c("OS_a1", "OS_a2")
-          ]
-        )
+          os_stageLevels_shiftLast[1])
         decisions[i, 9, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-          temp_factor * (alpha - os_stageLevels_corrected[1]))
+          os_stageLevels_shiftLast[2])
       } else if (
         p_values[i, "OS_a1"] <= os_alphaIncr_corrected[1] * temp_factor_interim
       ) {
+        decisions[i, 9, "OS_a1"] <- TRUE
         decisions[i, 9, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
@@ -493,27 +485,16 @@ power_metrics <- foreach(c = 1:cores_to_use, .errorhandling = "pass") %dopar%
       if (
         p_values[i, "PFS_a1"] <= alpha * bretz_weight_pfs * temp_factor_interim
       ) {
-        decisions[i, 10, "PFS_a1"] <- 1
+        decisions[i, 10, "PFS_a1"] <- TRUE
+        # Note: Once, PFS is rejected, we do not exploit dependence anymore and can directly use the critical values from the group-sequential design with shifted alpha
         decisions[i, 10, "OS_a1"] <- (p_values[i, "OS_a1"] <=
-          os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)
-        temp_factor <- inflation_factor(
-          current_levels = alpha -
-            (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs),
-          previous_levels = os_stageLevels_corrected[1] +
-            alpha * bretz_weight_pfs,
-          available_level = alpha,
-          covariance_matrix = var_ests[
-            i,
-            c("OS_a1", "OS_a2"),
-            c("OS_a1", "OS_a2")
-          ]
-        )
+          os_stageLevels_shiftInterim[1])
         decisions[i, 10, "OS_a2"] <- (p_values[i, "OS_a2"] <=
-          temp_factor *
-            (alpha - (os_stageLevels_corrected[1] + alpha * bretz_weight_pfs)))
+          os_stageLevels_shiftInterim[2])
       } else if (
         p_values[i, "OS_a1"] <= os_alphaIncr_corrected[1] * temp_factor_interim
       ) {
+        decisions[i, 10, "OS_a1"] <- TRUE
         decisions[i, 10, "PFS_a1"] <- (p_values[i, "PFS_a1"] <= alpha)
       } else {
         temp_factor <- inflation_factor(
