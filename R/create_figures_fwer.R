@@ -1,8 +1,15 @@
 require(ggplot2)
 require(ggpubr)
 
-override_r_PFS <- 33 / 64
-override_r_OS <- 46 / 64
+# To analyse non-default recruitment rates, set either
+#  override_r_PFS <- 33 / 64
+#  override_r_OS <- 46 / 64
+# or
+#  override_r_PFS <- 17 / 64
+#  override_r_OS <- 30 / 64
+
+override_r_PFS <- NA
+override_r_OS <- NA
 
 file_name_string <- "closed_testing_fwer"
 if (!is.na(override_r_PFS) & !is.na(override_r_OS)) {
@@ -26,22 +33,15 @@ power_metrics <- lapply(power_metrics, function(mat) {
 
 power_metrics <- lapply(power_metrics, function(mat) apply(mat, 2, as.numeric))
 
-strategies_old <- c(
-  "BON",
-  "EX/LAST",
-  "EX/FIRST",
-  "BON/GS",
-  "EX/GS/LAST",
-  "EX/GS/FIRST",
-  "OS"
-)
 strategies <- c(
   "BON",
-  "REC",
+  "REC/LAST",
+  "REC/FIRST",
   "EX/LAST",
   "EX/FIRST",
   "BON/GS",
-  "REC/GS",
+  "REC/GS/LAST",
+  "REC/GS/FIRST",
   "EX/GS/LAST",
   "EX/GS/FIRST",
   "OS"
@@ -65,6 +65,8 @@ if (!is.na(override_r_PFS) & !is.na(override_r_OS)) {
   )
 }
 
+preferred_symbols <- c(15, 16, 3, 4, 17, 18, 1, 2)
+
 ### CHOOSE SUBSET OF ALL COMBINATIONS FOR PLOT IN MAIN MANUSCRIPT
 plot_list <- list()
 for (i in 1:4) {
@@ -74,7 +76,8 @@ for (i in 1:4) {
     i
   )
 
-  strategy_subset <- c("BON", "EX/LAST", "OS")
+  strategy_subset <- c("BON", "EX/LAST", "EX/GS/LAST", "OS")
+  num_strategies <- length(strategy_subset)
 
   power_metrics_matrix <- do.call(rbind, power_metrics)
   plot_matrix <- power_metrics_matrix[
@@ -99,7 +102,8 @@ for (i in 1:4) {
     ) +
     geom_line(size = 1) +
     geom_point(size = 3) +
-    ylim(0.022, 0.028) +
+    scale_shape_manual(values = preferred_symbols[1:num_strategies]) +
+    ylim(0.02, 0.03) +
     geom_hline(yintercept = 0.025) +
     annotate(
       "rect",
@@ -154,13 +158,15 @@ for (i in 1:4) {
   )
 
   strategy_subset <- c(
-    "REC",
+    "REC/FIRST",
+    "REC/LAST",
     "EX/FIRST",
     "BON/GS",
-    "REC/GS",
-    "EX/GS/LAST",
+    "REC/GS/LAST",
+    "REC/GS/FIRST",
     "EX/GS/FIRST"
   )
+  num_strategies <- length(strategy_subset)
 
   power_metrics_matrix <- do.call(rbind, power_metrics)
   plot_matrix <- power_metrics_matrix[
@@ -185,7 +191,8 @@ for (i in 1:4) {
     ) +
     geom_line(size = 1) +
     geom_point(size = 3) +
-    ylim(0.0225, 0.0275) +
+    scale_shape_manual(values = preferred_symbols[1:num_strategies]) +
+    ylim(0.02, 0.03) +
     geom_hline(yintercept = 0.025) +
     annotate(
       "rect",
