@@ -8,11 +8,13 @@ load("results/data/closed_testing_power_metrics.Rda")
 
 strategies <- c(
   "BON",
-  "REC",
+  "REC/LAST",
+  "REC/FIRST",
   "EX/LAST",
   "EX/FIRST",
   "BON/GS",
-  "REC/GS",
+  "REC/GS/LAST",
+  "REC/GS/FIRST",
   "EX/GS/LAST",
   "EX/GS/FIRST",
   "OS"
@@ -70,7 +72,7 @@ for (i in 1:4) {
 
   plot_df <- scen_df[
     scen_df$Strategy %in%
-      c("REC", "EX/LAST", "EX/GS/LAST", "EX/FIRST", "OS"),
+      c("REC/LAST", "EX/LAST", "EX/GS/LAST", "EX/FIRST", "OS"),
   ]
   plot_df$rel_power_os_gain[plot_df$Strategy == "EX/GS/LAST"] <- NA
   rel_power_gain_os_plot <-
@@ -79,10 +81,10 @@ for (i in 1:4) {
       aes(x = effect_scale, y = rel_power_os_gain, group = Strategy)
     ) +
     geom_hline(yintercept = 1, colour = "red", linewidth = 1.5) +
-    geom_line(aes(linetype = Strategy), size = 1) +
+    geom_line(aes(linetype = Strategy), linewidth = 1) +
     scale_linetype_manual(
       values = c(
-        "REC" = "twodash",
+        "REC/LAST" = "twodash",
         "EX/LAST" = "solid",
         "EX/FIRST" = "dashed",
         "EX/GS/LAST" = "dotdash",
@@ -93,13 +95,15 @@ for (i in 1:4) {
     scale_y_continuous(breaks = seq(1, 1.125, 0.025), limits = c(1, 1.125)) +
     xlab("w") +
     ylab("Rel. power compared to Bonferroni correction") +
-    theme(text = element_text(size = 15))
+    theme(text = element_text(size = 15), legend.key.size = unit(0.75, "cm"))
 
   plot_df <- scen_df[
     scen_df$Strategy %in%
-      c("REC", "EX/LAST", "EX/GS/LAST", "EX/FIRST", "OS"),
+      c("EX/LAST", "EX/GS/LAST", "EX/FIRST", "OS"),
   ]
-  plot_df$rel_power_gain_disj[plot_df$Strategy %in% c("REC", "EX/FIRST")] <- NA
+  plot_df$rel_power_gain_disj[
+    plot_df$Strategy %in% c("REC/LAST", "EX/FIRST")
+  ] <- NA
   rel_power_gain_disj_plot <-
     ggplot(
       data = plot_df,
@@ -109,7 +113,7 @@ for (i in 1:4) {
     geom_line(aes(linetype = Strategy), size = 1) +
     scale_linetype_manual(
       values = c(
-        "REC" = "twodash",
+        "REC/LAST" = "twodash",
         "EX/LAST" = "solid",
         "EX/FIRST" = "dashed",
         "EX/GS/LAST" = "dotdash",
@@ -117,10 +121,13 @@ for (i in 1:4) {
       )
     ) +
     geom_point(size = 3) +
-    scale_y_continuous(breaks = seq(0.85, 1.05, 0.05), limits = c(0.85, 1.05)) +
+    scale_y_continuous(
+      breaks = seq(0.85, 1.05, 0.05),
+      limits = c(0.845, 1.05)
+    ) +
     xlab("w") +
     ylab("Rel. power compared to Bonferroni correction") +
-    theme(text = element_text(size = 15))
+    theme(text = element_text(size = 15), legend.key.size = unit(0.75, "cm"))
 
   rel_power_coll <- ggarrange(
     rel_power_gain_os_plot,
@@ -194,17 +201,3 @@ rel_power_gain_disj_plot <-
   xlab("w") +
   ylab("Rel. power compared to Bonferroni correction") +
   theme(text = element_text(size = 15))
-
-ggarrange(
-  rel_power_gain_os_plot,
-  rel_power_gain_disj_plot,
-  common.legend = TRUE,
-  legend = "right"
-)
-ggsave(
-  "results/plots/rel_power.pdf",
-  overall_fwer_plot,
-  device = "pdf",
-  width = 12,
-  height = 8
-)

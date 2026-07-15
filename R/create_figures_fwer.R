@@ -100,10 +100,10 @@ for (i in 1:4) {
       data = plot_matrix,
       aes(x = n, y = Rej_One, linetype = Frailty, shape = Strategy)
     ) +
-    geom_line(size = 1) +
+    geom_line(linewidth = 1) +
     geom_point(size = 3) +
     scale_shape_manual(values = preferred_symbols[1:num_strategies]) +
-    ylim(0.02, 0.03) +
+    ylim(0.0215, 0.0285) +
     geom_hline(yintercept = 0.025) +
     annotate(
       "rect",
