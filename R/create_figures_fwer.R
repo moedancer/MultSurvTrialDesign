@@ -134,7 +134,7 @@ ggsave(
   overall_fwer_plot,
   device = "pdf",
   width = 12,
-  height = 8
+  height = 6
 )
 
 save_file_string <- "fwer_remaining"
@@ -189,7 +189,7 @@ for (i in 1:4) {
       data = plot_matrix,
       aes(x = n, y = Rej_One, linetype = Frailty, shape = Strategy)
     ) +
-    geom_line(size = 1) +
+    geom_line(linewidth = 1) +
     geom_point(size = 3) +
     scale_shape_manual(values = preferred_symbols[1:num_strategies]) +
     ylim(0.02, 0.03) +
@@ -223,5 +223,5 @@ ggsave(
   overall_fwer_plot,
   device = "pdf",
   width = 12,
-  height = 8
+  height = 6
 )
