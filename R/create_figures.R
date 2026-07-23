@@ -94,8 +94,12 @@ for (i in 1:4) {
     geom_point(size = 3) +
     scale_y_continuous(breaks = seq(1, 1.125, 0.025), limits = c(1, 1.125)) +
     xlab("w") +
-    ylab("Rel. power compared to Bonferroni correction") +
-    theme(text = element_text(size = 15), legend.key.size = unit(0.75, "cm"))
+    ylab(expression(paste(
+      "Rel. power to reject ",
+      H["0,OS"],
+      " compared to Bonferroni correction"
+    ))) +
+    theme(text = element_text(size = 15), legend.key.size = unit(0.85, "cm"))
 
   plot_df <- scen_df[
     scen_df$Strategy %in%
@@ -126,8 +130,8 @@ for (i in 1:4) {
       limits = c(0.845, 1.05)
     ) +
     xlab("w") +
-    ylab("Rel. power compared to Bonferroni correction") +
-    theme(text = element_text(size = 15), legend.key.size = unit(0.75, "cm"))
+    ylab("Rel. disjunctive power compared to Bonferroni correction") +
+    theme(text = element_text(size = 15), legend.key.size = unit(0.85, "cm"))
 
   rel_power_coll <- ggarrange(
     rel_power_gain_os_plot,
